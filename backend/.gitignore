@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Database
+*.db
+prisma/migrations/
+!prisma/migrations/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+receipts/
+
+# Coverage
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

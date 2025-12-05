@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TENANT
+}
+
+enum UnitType {
+  ONE_BEDROOM
+  TWO_BEDROOM
+}
+
+enum TenantStatus {
+  CURRENT
+  OVERDUE
+  DELINQUENT
+  EVICTED
+  FORMER
+}
+
+enum PaymentType {
+  RENT
+  WATER
+  MAINTENANCE
+  OTHER
+}
+
+enum PaymentMethod {
+  MPESA
+  CASH
+  BANK_TRANSFER
+  CHECK
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id                  String        @id @default(cuid())
+  email               String        @unique
+  phone               String        @unique
+  password            String
+  name                String
+  role                UserRole      @default(TENANT)
+  
+  // Tenant specific
+  apartment           String        @unique // e.g., "1A1", "2B2", "6A1"
+  unitType            UnitType
+  rentAmount          Float         // 15000 or 18000
+  waterRate           Float         @default(150) // Per unit
+  balance             Float         @default(0)
+  status              TenantStatus  @default(CURRENT)
+  
+  // Move-in details
+  moveInDate          DateTime
+  leaseEndDate        DateTime?
+  emergencyContact    String?
+  notes               String?
+  
+  // Files
+  idCopyUrl           String?
+  contractUrl         String?
+  
+  // Relations
+  payments            Payment[]
+  receipts            Receipt[]
+  waterReadings       WaterReading[]
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  @@index([apartment])
+  @@index([status])
+  @@index([role])
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  tenant              User          @relation(fields: [tenantId], references: [id])
+  
+  // Payment details
+  type                PaymentType
+  method              PaymentMethod
+  amount              Float
+  currency            String        @default("KES")
+  month               String        // "YYYY-MM"
+  year                Int
+  
+  // Payment information
+  description         String?
+  transactionCode     String?       // M-Pesa code
+  caretakerName       String?       // For cash payments
+  status              PaymentStatus @default(PENDING)
+  
+  // Files
+  screenshotUrls      String[]      // Array of file paths
+  
+  // Verification
+  verifiedAt          DateTime?
+  verifiedBy          String?       // Admin ID
+  adminNotes          String?
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // Relations
+  receipts            Receipt[]
+  
+  @@index([tenantId])
+  @@index([status])
+  @@index([month])
+  @@index([createdAt])
+}
+
+model Receipt {
+  id                  String        @id @default(cuid())
+  paymentId           String        @unique
+  payment             Payment       @relation(fields: [paymentId], references: [id])
+  
+  // Receipt details
+  receiptNumber       String        @unique // Format: MTA-2024-001
+  filePath            String
+  generatedAt         DateTime      @default(now())
+  
+  // Download tracking
+  downloaded          Boolean       @default(false)
+  downloadedAt        DateTime?
+  downloadCount       Int           @default(0)
+  
+  @@index([receiptNumber])
+  @@index([generatedAt])
+}
+
+model WaterReading {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  tenant              User          @relation(fields: [tenantId], references: [id])
+  
+  // Reading details
+  previousReading     Int
+  currentReading      Int
+  units               Int           // currentReading - previousReading
+  rate                Float         @default(150)
+  amount              Float
+  month               String        // "YYYY-MM"
+  year                Int
+  
+  // Status
+  paid                Boolean       @default(false)
+  paymentId           String?
+  payment             Payment?      @relation(fields: [paymentId], references: [id])
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  @@index([tenantId])
+  @@index([month])
+  @@index([paid])
+}
+
+model AnalyticsSnapshot {
+  id                  String        @id @default(cuid())
+  date                DateTime      @unique
+  
+  // Financial metrics
+  totalRentDue        Float
+  totalRentPaid       Float
+  totalWaterDue       Float
+  totalWaterPaid      Float
+  totalOtherDue       Float
+  totalOtherPaid      Float
+  
+  // Occupancy metrics
+  totalUnits          Int
+  occupiedUnits       Int
+  vacantUnits         Int
+  maintenanceUnits    Int
+  occupancyRate       Float
+  vacancyRate         Float
+  
+  // Payment metrics
+  pendingPayments     Int
+  verifiedPayments    Int
+  rejectedPayments    Int
+  
+  // Tenant metrics
+  currentTenants      Int
+  overdueTenants      Int
+  delinquentTenants   Int
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  
+  @@index([date])
+}
+
+model MaintenanceRequest {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  tenant              User          @relation(fields: [tenantId], references: [id])
+  
+  // Request details
+  title               String
+  description         String
+  priority            String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status              String        @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  
+  // Location
+  apartment           String
+  location            String?       // Specific location in apartment
+  
+  // Files
+  imageUrls           String[]
+  
+  // Resolution
+  resolvedAt          DateTime?
+  resolvedBy          String?
+  resolutionNotes     String?
+  cost                Float?
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  @@index([tenantId])
+  @@index([status])
+  @@index([priority])
+}
+
+model Notification {
+  id                  String        @id @default(cuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id])
+  
+  // Notification details
+  title               String
+  message             String
+  type                String        // PAYMENT, MAINTENANCE, SYSTEM, ALERT
+  read                Boolean       @default(false)
+  
+  // Related data
+  relatedId           String?       // Payment ID, Maintenance ID, etc.
+  relatedType         String?
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id                  String        @id @default(cuid())
+  
+  // Who performed the action
+  userId              String?
+  userEmail           String?
+  userRole            String?
+  
+  // Action details
+  action              String        // CREATE, UPDATE, DELETE, VERIFY, REJECT
+  entity              String        // PAYMENT, TENANT, RECEIPT, etc.
+  entityId            String?
+  
+  // Changes
+  oldData             Json?
+  newData             Json?
+  
+  // Metadata
+  ipAddress           String?
+  userAgent           String?
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
