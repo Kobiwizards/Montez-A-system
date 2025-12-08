@@ -15,4 +15,3 @@ router.get('/tenants', auth_middleware_1.authenticate, (0, auth_middleware_1.aut
 router.get('/water', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), analyticsController.getWaterConsumptionReport);
 router.get('/export', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), analyticsController.exportReport);
 exports.default = router;
-//# sourceMappingURL=analytics.routes.js.map

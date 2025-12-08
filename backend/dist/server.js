@@ -98,4 +98,3 @@ function setupAutomatedTasks() {
     schedulePaymentReminders();
 }
 startServer();
-//# sourceMappingURL=server.js.map

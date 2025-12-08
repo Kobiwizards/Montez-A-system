@@ -8,4 +8,3 @@ const notFoundHandler = (_req, res) => {
     });
 };
 exports.notFoundHandler = notFoundHandler;
-//# sourceMappingURL=not-found.middleware.js.map

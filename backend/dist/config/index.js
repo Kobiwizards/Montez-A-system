@@ -47,4 +47,3 @@ requiredEnvVars.forEach(envVar => {
         console.warn(`⚠️  Warning: ${envVar} environment variable is not set`);
     }
 });
-//# sourceMappingURL=index.js.map

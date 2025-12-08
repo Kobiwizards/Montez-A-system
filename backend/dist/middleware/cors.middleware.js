@@ -29,4 +29,3 @@ exports.corsMiddleware = (0, cors_1.default)({
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     exposedHeaders: ['Content-Length', 'X-RateLimit-Limit', 'X-RateLimit-Remaining']
 });
-//# sourceMappingURL=cors.middleware.js.map

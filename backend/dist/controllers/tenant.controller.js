@@ -493,4 +493,3 @@ class TenantController {
     }
 }
 exports.TenantController = TenantController;
-//# sourceMappingURL=tenant.controller.js.map

@@ -19,4 +19,3 @@ router.get('/pending', auth_middleware_1.authenticate, (0, auth_middleware_1.aut
 router.put('/:id/verify', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), paymentController.verifyPayment);
 router.delete('/:id', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), paymentController.deletePayment);
 exports.default = router;
-//# sourceMappingURL=payment.routes.js.map

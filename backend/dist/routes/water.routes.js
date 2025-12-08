@@ -17,4 +17,3 @@ router.get('/calculator', auth_middleware_1.authenticate, waterController.calcul
 // Tenant routes
 router.get('/me/readings', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('TENANT'), waterController.getTenantReadings);
 exports.default = router;
-//# sourceMappingURL=water.routes.js.map

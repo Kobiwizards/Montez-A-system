@@ -17,4 +17,3 @@ router.put('/:id/balance', auth_middleware_1.authenticate, (0, auth_middleware_1
 // Tenant routes
 router.get('/dashboard/me', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('TENANT'), tenantController.getTenantDashboard);
 exports.default = router;
-//# sourceMappingURL=tenant.routes.js.map

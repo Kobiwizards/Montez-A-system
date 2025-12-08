@@ -167,4 +167,3 @@ function getUnitTypeOccupancy(tenants) {
     });
     return occupancy;
 }
-//# sourceMappingURL=calculations.js.map

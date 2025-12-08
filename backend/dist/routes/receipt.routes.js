@@ -15,4 +15,3 @@ router.delete('/:id', auth_middleware_1.authenticate, (0, auth_middleware_1.auth
 // Tenant routes
 router.get('/me/history', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('TENANT'), receiptController.getTenantReceipts);
 exports.default = router;
-//# sourceMappingURL=receipt.routes.js.map

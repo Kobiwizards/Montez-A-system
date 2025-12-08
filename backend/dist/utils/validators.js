@@ -192,4 +192,3 @@ Validators.fileSize = (maxSize) => zod_1.z.instanceof(Buffer)
     .refine((buf) => buf.length <= maxSize, `File size must be less than ${maxSize / 1024 / 1024}MB`);
 Validators.fileType = (allowedTypes) => zod_1.z.string()
     .refine((type) => allowedTypes.includes(type), `File type must be one of: ${allowedTypes.join(', ')}`);
-//# sourceMappingURL=validators.js.map

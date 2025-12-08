@@ -38,4 +38,3 @@ router.use('/analytics', analytics_routes_1.default);
 router.use('/water', water_routes_1.default);
 router.use('/maintenance', maintenance_routes_1.default);
 exports.default = router;
-//# sourceMappingURL=index.js.map

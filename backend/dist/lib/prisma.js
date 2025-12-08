@@ -30,4 +30,3 @@ exports.prisma.$use(async (params, next) => {
     }
 });
 exports.default = exports.prisma;
-//# sourceMappingURL=prisma.js.map

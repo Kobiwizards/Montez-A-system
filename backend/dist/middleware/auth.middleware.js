@@ -149,4 +149,3 @@ const refreshToken = async (req, res) => {
     }
 };
 exports.refreshToken = refreshToken;
-//# sourceMappingURL=auth.middleware.js.map

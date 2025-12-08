@@ -386,4 +386,3 @@ class ReceiptController {
     }
 }
 exports.ReceiptController = ReceiptController;
-//# sourceMappingURL=receipt.controller.js.map

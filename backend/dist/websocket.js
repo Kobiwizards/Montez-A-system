@@ -195,4 +195,3 @@ function sendSystemAlert(message, type = 'info') {
         webSocketFunctions.sendSystemAlert(message, type);
     }
 }
-//# sourceMappingURL=websocket.js.map

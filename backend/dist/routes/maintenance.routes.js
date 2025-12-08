@@ -18,4 +18,3 @@ router.put('/:id/status', auth_middleware_1.authenticate, (0, auth_middleware_1.
 router.put('/:id', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), maintenanceController.updateRequest);
 router.delete('/:id', auth_middleware_1.authenticate, (0, auth_middleware_1.authorize)('ADMIN'), maintenanceController.deleteRequest);
 exports.default = router;
-//# sourceMappingURL=maintenance.routes.js.map

@@ -86,4 +86,3 @@ const createApp = () => {
     return app;
 };
 exports.createApp = createApp;
-//# sourceMappingURL=app.js.map
