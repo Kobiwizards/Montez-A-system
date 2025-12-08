@@ -70,27 +70,41 @@ export class AuditLogService {
       if (endDate) where.createdAt.lte = endDate
     }
 
+    // Get logs with user info using a separate query
     const [logs, total] = await Promise.all([
       prisma.auditLog.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
-          user: {
+      }),
+      prisma.auditLog.count({ where }),
+    ])
+
+    // Get user info for logs that have userId
+    const logsWithUsers = await Promise.all(
+      logs.map(async (log) => {
+        let user = null
+        if (log.userId) {
+          user = await prisma.user.findUnique({
+            where: { id: log.userId },
             select: {
               name: true,
               email: true,
               role: true,
             },
-          },
-        } as any, // Use type assertion to fix TypeScript issue
-      }),
-      prisma.auditLog.count({ where }),
-    ])
+          })
+        }
+
+        return {
+          ...log,
+          user,
+        }
+      })
+    )
 
     return {
-      logs,
+      logs: logsWithUsers,
       pagination: {
         page,
         limit,
@@ -107,25 +121,35 @@ export class AuditLogService {
         entityId,
       },
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-      } as any, // Use type assertion to fix TypeScript issue
     })
 
-    return logs.map(log => ({
-      id: log.id,
-      action: log.action,
-      user: log.user,
-      timestamp: log.createdAt,
-      changes: this.extractChanges(log.oldData, log.newData),
-      ipAddress: log.ipAddress,
-    }))
+    // Get user info for logs
+    const logsWithUsers = await Promise.all(
+      logs.map(async (log) => {
+        let user = null
+        if (log.userId) {
+          user = await prisma.user.findUnique({
+            where: { id: log.userId },
+            select: {
+              name: true,
+              email: true,
+              role: true,
+            },
+          })
+        }
+
+        return {
+          id: log.id,
+          action: log.action,
+          user,
+          timestamp: log.createdAt,
+          changes: this.extractChanges(log.oldData as any, log.newData as any),
+          ipAddress: log.ipAddress,
+        }
+      })
+    )
+
+    return logsWithUsers
   }
 
   private extractChanges(oldData: any, newData: any) {
@@ -188,7 +212,7 @@ export class AuditLogService {
       log.user?.name || log.userEmail || 'System',
       log.userRole || log.user?.role || '',
       log.ipAddress || '',
-      this.formatChangesForCSV(log.oldData, log.newData),
+      this.formatChangesForCSV(log.oldData as any, log.newData as any),
     ])
 
     const csvContent = [

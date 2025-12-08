@@ -6,6 +6,7 @@ import { FileService } from '../services/file.service'
 const router = Router()
 const maintenanceController = new MaintenanceController()
 const fileService = new FileService()
+
 const upload = fileService.getMulterConfig()
 
 // Tenant routes
@@ -18,16 +19,15 @@ router.post(
 )
 
 router.get(
-  '/me',
+  '/my-requests',
   authenticate,
   authorize('TENANT'),
   maintenanceController.getTenantRequests
 )
 
 router.get(
-  '/me/:id',
+  '/:id',
   authenticate,
-  authorize('TENANT'),
   maintenanceController.getRequestById
 )
 

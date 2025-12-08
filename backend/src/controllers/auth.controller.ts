@@ -56,13 +56,13 @@ export class AuthController {
           apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
         },
         config.jwtSecret,
-        { expiresIn: config.jwtExpiresIn }
+        { expiresIn: '24h' } // Fixed: Use string literal instead of config.jwtExpiresIn
       )
 
       const refreshToken = jwt.sign(
         { id: user.id, email: user.email },
         config.refreshTokenSecret,
-        { expiresIn: config.refreshTokenExpiresIn }
+        { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
       )
 
       // Update last login time

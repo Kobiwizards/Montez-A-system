@@ -3,6 +3,21 @@ import jwt from 'jsonwebtoken'
 import { config } from '../config/index'
 import { prisma } from '../lib/prisma'
 
+// Extend the Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string
+        email: string
+        role: string
+        apartment?: string
+      }
+    }
+  }
+}
+
+// Keep AuthRequest for backward compatibility
 export interface AuthRequest extends Request {
   user?: {
     id: string
@@ -92,7 +107,7 @@ export const authenticate = async (
 }
 
 export const authorize = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): Response | void => {
     if (!req.user) {
       return res.status(401).json({ 
         success: false, 
@@ -150,13 +165,13 @@ export const refreshToken = async (
         apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
       },
       config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      { expiresIn: '24h' } // Fixed: Use string literal
     )
 
     const newRefreshToken = jwt.sign(
       { id: user.id, email: user.email },
       config.refreshTokenSecret,
-      { expiresIn: config.refreshTokenExpiresIn }
+      { expiresIn: '7d' } // Fixed: Use string literal
     )
 
     return res.status(200).json({

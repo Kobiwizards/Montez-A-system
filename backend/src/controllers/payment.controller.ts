@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 import { ReceiptService } from '../services/receipt.service'
 import { EmailService } from '../services/email.service'
-import { FileService } from '../services/file.service'
+import { FileService, UploadedFile } from '../services/file.service'
 import { config } from '../config/index'
 import path from 'path'
 import fs from 'fs/promises'
@@ -22,7 +22,7 @@ export class PaymentController {
     this.fileService = new FileService()
   }
 
-  getAllPayments = async (req: Request, res: Response) => {
+  getAllPayments = async (req: Request, res: Response): Promise<void> => {
     try {
       const {
         page = 1,
@@ -100,7 +100,7 @@ export class PaymentController {
     }
   }
 
-  getPaymentById = async (req: Request, res: Response) => {
+  getPaymentById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -127,20 +127,20 @@ export class PaymentController {
         })
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: payment,
       })
     } catch (error) {
       console.error('Get payment by ID error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  createPayment = async (req: AuthRequest, res: Response) => {
+  createPayment = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -173,11 +173,23 @@ export class PaymentController {
 
       // Handle file uploads
       const screenshotUrls: string[] = []
-      if (req.files && Array.isArray(req.files)) {
-        for (const file of req.files) {
-          const filePath = await this.fileService.savePaymentScreenshot(
-            file,
-            tenant.id
+      
+      // Check if files exist and handle both array and object types
+      if (req.files) {
+        let filesArray: Express.Multer.File[] = []
+        
+        if (Array.isArray(req.files)) {
+          filesArray = req.files
+        } else if (typeof req.files === "object") {
+          // Convert object of arrays to single array
+          filesArray = Object.values(req.files).flat()
+        }
+        
+        for (const file of filesArray) {
+          const filePath = await this.fileService.saveFile(
+            file as UploadedFile,
+            tenant.id,
+            "payments"
           )
           screenshotUrls.push(filePath)
         }
@@ -249,21 +261,21 @@ export class PaymentController {
       // Send notification to admin
       await this.emailService.sendPaymentNotification(payment, tenant)
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Payment submitted successfully and pending verification',
         data: payment,
       })
     } catch (error) {
       console.error('Create payment error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  verifyPayment = async (req: AuthRequest, res: Response) => {
+  verifyPayment = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -361,21 +373,21 @@ export class PaymentController {
       // Send notification to tenant
       await this.emailService.sendPaymentStatusNotification(payment.tenant, updatedPayment)
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: `Payment ${status.toLowerCase()} successfully`,
         data: updatedPayment,
       })
     } catch (error) {
       console.error('Verify payment error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getPendingPayments = async (req: Request, res: Response) => {
+  getPendingPayments = async (req: Request, res: Response): Promise<void> => {
     try {
       const { page = 1, limit = 20 } = req.query
       const skip = (Number(page) - 1) * Number(limit)
@@ -420,7 +432,7 @@ export class PaymentController {
     }
   }
 
-  getTenantPayments = async (req: AuthRequest, res: Response) => {
+  getTenantPayments = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -461,7 +473,7 @@ export class PaymentController {
         prisma.payment.count({ where }),
       ])
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: payments,
         pagination: {
@@ -473,14 +485,14 @@ export class PaymentController {
       })
     } catch (error) {
       console.error('Get tenant payments error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  deletePayment = async (req: AuthRequest, res: Response) => {
+  deletePayment = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -542,13 +554,13 @@ export class PaymentController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Payment deleted successfully',
       })
     } catch (error) {
       console.error('Delete payment error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })

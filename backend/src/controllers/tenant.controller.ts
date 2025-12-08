@@ -15,7 +15,7 @@ export class TenantController {
     this.emailService = new EmailService()
   }
 
-  getAllTenants = async (req: Request, res: Response) => {
+  getAllTenants = async (req: Request, res: Response): Promise<void> => {
     try {
       const {
         page = 1,
@@ -102,7 +102,7 @@ export class TenantController {
     }
   }
 
-  getTenantById = async (req: Request, res: Response) => {
+  getTenantById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -160,20 +160,20 @@ export class TenantController {
         },
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: tenantWithStats,
       })
     } catch (error) {
       console.error('Get tenant by ID error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  createTenant = async (req: Request, res: Response) => {
+  createTenant = async (req: Request, res: Response): Promise<Response> => {
     try {
       const {
         email,
@@ -250,7 +250,7 @@ export class TenantController {
       // Remove password from response
       const { password, ...tenantWithoutPassword } = tenant
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Tenant created successfully',
         data: tenantWithoutPassword,
@@ -258,14 +258,14 @@ export class TenantController {
       })
     } catch (error) {
       console.error('Create tenant error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  updateTenant = async (req: Request, res: Response) => {
+  updateTenant = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
       const updateData = req.body
@@ -326,21 +326,21 @@ export class TenantController {
       // Remove password from response
       const { password, ...tenantWithoutPassword } = tenant
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Tenant updated successfully',
         data: tenantWithoutPassword,
       })
     } catch (error) {
       console.error('Update tenant error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  deleteTenant = async (req: Request, res: Response) => {
+  deleteTenant = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -378,20 +378,20 @@ export class TenantController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Tenant marked as former successfully',
       })
     } catch (error) {
       console.error('Delete tenant error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getTenantDashboard = async (req: AuthRequest, res: Response) => {
+  getTenantDashboard = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -482,20 +482,20 @@ export class TenantController {
         waterReadings: tenant.waterReadings,
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: dashboardData,
       })
     } catch (error) {
       console.error('Get tenant dashboard error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  updateTenantBalance = async (req: Request, res: Response) => {
+  updateTenantBalance = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
       const { amount, type, notes } = req.body // type: 'ADD' | 'DEDUCT'
@@ -543,7 +543,7 @@ export class TenantController {
         await this.emailService.sendBalanceNotification(tenant, newBalance)
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: `Balance ${type === 'ADD' ? 'added to' : 'deducted from'} successfully`,
         data: {
@@ -554,7 +554,7 @@ export class TenantController {
       })
     } catch (error) {
       console.error('Update tenant balance error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })

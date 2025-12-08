@@ -1,15 +1,4 @@
-import { PrismaClient } from '@prisma/client'
-import { EmailService } from './email.service'
-
-const prisma = new PrismaClient()
-
 export class AnalyticsService {
-  private emailService: EmailService
-
-  constructor() {
-    this.emailService = new EmailService()
-  }
-
   async generateDailySnapshot(): Promise<void> {
     // Implement if needed
     return Promise.resolve()
@@ -21,7 +10,7 @@ export class AnalyticsService {
   }
 
   // Add dummy methods to satisfy TypeScript
-  generateFinancialReport(options: any): Promise<any> {
+  generateFinancialReport(_options: any): Promise<any> {
     return Promise.resolve({})
   }
 
@@ -33,15 +22,15 @@ export class AnalyticsService {
     return Promise.resolve({})
   }
 
-  generateWaterConsumptionReport(options: any): Promise<any> {
+  generateWaterConsumptionReport(_options: any): Promise<any> {
     return Promise.resolve({})
   }
 
-  convertToCSV(data: any): string {
+  convertToCSV(_data: any): string {
     return ''
   }
 
-  generatePDFReport(data: any, type: string): Promise<Buffer> {
+  generatePDFReport(_data: any, _type: string): Promise<Buffer> {
     return Promise.resolve(Buffer.from(''))
   }
 }

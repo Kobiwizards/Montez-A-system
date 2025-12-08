@@ -11,7 +11,7 @@ export class WaterController {
     this.auditLogService = new AuditLogService()
   }
 
-  getAllReadings = async (req: Request, res: Response) => {
+  getAllReadings = async (req: Request, res: Response): Promise<void> => {
     try {
       const {
         page = 1,
@@ -98,7 +98,7 @@ export class WaterController {
     }
   }
 
-  getReadingById = async (req: Request, res: Response) => {
+  getReadingById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -133,20 +133,20 @@ export class WaterController {
         })
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: reading,
       })
     } catch (error) {
       console.error('Get water reading by ID error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  createReading = async (req: AuthRequest, res: Response) => {
+  createReading = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -238,21 +238,21 @@ export class WaterController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Water reading created successfully',
         data: reading,
       })
     } catch (error) {
       console.error('Create water reading error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  updateReading = async (req: AuthRequest, res: Response) => {
+  updateReading = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -343,21 +343,21 @@ export class WaterController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Water reading updated successfully',
         data: reading,
       })
     } catch (error) {
       console.error('Update water reading error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  deleteReading = async (req: AuthRequest, res: Response) => {
+  deleteReading = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -420,20 +420,20 @@ export class WaterController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Water reading deleted successfully',
       })
     } catch (error) {
       console.error('Delete water reading error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getTenantReadings = async (req: AuthRequest, res: Response) => {
+  getTenantReadings = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -490,7 +490,7 @@ export class WaterController {
           : 0,
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: readings,
         summary,
@@ -503,14 +503,14 @@ export class WaterController {
       })
     } catch (error) {
       console.error('Get tenant water readings error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  calculateWaterBill = async (req: Request, res: Response) => {
+  calculateWaterBill = async (req: Request, res: Response): Promise<void> => {
     try {
       const { units, rate } = req.query
 

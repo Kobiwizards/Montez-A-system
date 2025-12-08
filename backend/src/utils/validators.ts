@@ -31,7 +31,8 @@ export class Validators {
   static month = z.string()
     .regex(/^\d{4}-\d{2}$/, 'Month must be in YYYY-MM format')
     .refine((val) => {
-      return month >= 1 && month <= 12
+      const monthNum = parseInt(val.split('-')[1])
+      return monthNum >= 1 && monthNum <= 12
     }, 'Month must be between 01 and 12')
   
   static date = z.string()

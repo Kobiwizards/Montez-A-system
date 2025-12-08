@@ -16,7 +16,7 @@ export class ReceiptController {
     this.auditLogService = new AuditLogService()
   }
 
-  getReceiptById = async (req: Request, res: Response) => {
+  getReceiptById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -56,20 +56,20 @@ export class ReceiptController {
         },
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: receipt,
       })
     } catch (error) {
       console.error('Get receipt by ID error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  downloadReceipt = async (req: Request, res: Response) => {
+  downloadReceipt = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params
 
@@ -80,6 +80,7 @@ export class ReceiptController {
             include: {
               tenant: {
                 select: {
+                  id: true,
                   name: true,
                   apartment: true,
                   email: true,
@@ -92,10 +93,11 @@ export class ReceiptController {
       })
 
       if (!receipt) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Receipt not found',
         })
+        return
       }
 
       const filePath = path.join(config.receiptsPath, receipt.filePath)
@@ -104,7 +106,17 @@ export class ReceiptController {
         await fs.access(filePath)
       } catch {
         // Regenerate receipt if file doesn't exist
-        await this.receiptService.generateReceipt(receipt.payment)
+        // First get the full payment with tenant data
+        const fullPayment = await prisma.payment.findUnique({
+          where: { id: receipt.paymentId },
+          include: {
+            tenant: true,
+          },
+        })
+
+        if (fullPayment) {
+          await this.receiptService.generateReceipt(fullPayment)
+        }
       }
 
       // Track download
@@ -130,14 +142,16 @@ export class ReceiptController {
       })
     } catch (error) {
       console.error('Download receipt error:', error)
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      })
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Internal server error',
+        })
+      }
     }
   }
 
-  generateReceipt = async (req: AuthRequest, res: Response) => {
+  generateReceipt = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -196,21 +210,21 @@ export class ReceiptController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Receipt generated successfully',
         data: receipt,
       })
     } catch (error) {
       console.error('Generate receipt error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getTenantReceipts = async (req: AuthRequest, res: Response) => {
+  getTenantReceipts = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -257,7 +271,7 @@ export class ReceiptController {
         prisma.receipt.count({ where }),
       ])
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: receipts,
         pagination: {
@@ -269,14 +283,14 @@ export class ReceiptController {
       })
     } catch (error) {
       console.error('Get tenant receipts error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getAllReceipts = async (req: Request, res: Response) => {
+  getAllReceipts = async (req: Request, res: Response): Promise<void> => {
     try {
       const {
         page = 1,
@@ -349,7 +363,7 @@ export class ReceiptController {
     }
   }
 
-  deleteReceipt = async (req: AuthRequest, res: Response) => {
+  deleteReceipt = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -397,13 +411,13 @@ export class ReceiptController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Receipt deleted successfully',
       })
     } catch (error) {
       console.error('Delete receipt error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })

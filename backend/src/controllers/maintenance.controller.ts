@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 import { EmailService } from '../services/email.service'
-import { FileService } from '../services/file.service'
+import { FileService, UploadedFile } from '../services/file.service'
 
 export class MaintenanceController {
   private auditLogService: AuditLogService
@@ -16,7 +16,7 @@ export class MaintenanceController {
     this.fileService = new FileService()
   }
 
-  createRequest = async (req: AuthRequest, res: Response) => {
+  createRequest = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -43,9 +43,10 @@ export class MaintenanceController {
       const imageUrls: string[] = []
       if (req.files && Array.isArray(req.files)) {
         for (const file of req.files) {
-          const filePath = await this.fileService.savePaymentScreenshot(
-            file,
-            tenant.id
+          const filePath = await this.fileService.saveFile(
+            file as UploadedFile,
+            tenant.id,
+            'maintenance'
           )
           imageUrls.push(filePath)
         }
@@ -89,21 +90,21 @@ export class MaintenanceController {
         'created'
       )
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Maintenance request submitted successfully',
         data: maintenanceRequest,
       })
     } catch (error) {
       console.error('Create maintenance request error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getAllRequests = async (req: Request, res: Response) => {
+  getAllRequests = async (req: Request, res: Response): Promise<void> => {
     try {
       const {
         page = 1,
@@ -190,7 +191,7 @@ export class MaintenanceController {
     }
   }
 
-  getRequestById = async (req: AuthRequest, res: Response) => {
+  getRequestById = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -224,20 +225,20 @@ export class MaintenanceController {
         })
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: request,
       })
     } catch (error) {
       console.error('Get maintenance request by ID error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  updateRequestStatus = async (req: AuthRequest, res: Response) => {
+  updateRequestStatus = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -301,21 +302,21 @@ export class MaintenanceController {
         status === 'COMPLETED' ? 'resolved' : 'updated'
       )
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Maintenance request updated successfully',
         data: request,
       })
     } catch (error) {
       console.error('Update maintenance request status error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  updateRequest = async (req: AuthRequest, res: Response) => {
+  updateRequest = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -359,21 +360,21 @@ export class MaintenanceController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Maintenance request updated successfully',
         data: request,
       })
     } catch (error) {
       console.error('Update maintenance request error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  deleteRequest = async (req: AuthRequest, res: Response) => {
+  deleteRequest = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -423,20 +424,20 @@ export class MaintenanceController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Maintenance request deleted successfully',
       })
     } catch (error) {
       console.error('Delete maintenance request error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getTenantRequests = async (req: AuthRequest, res: Response) => {
+  getTenantRequests = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -470,7 +471,7 @@ export class MaintenanceController {
         prisma.maintenanceRequest.count({ where }),
       ])
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: requests,
         pagination: {
@@ -482,7 +483,7 @@ export class MaintenanceController {
       })
     } catch (error) {
       console.error('Get tenant maintenance requests error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
