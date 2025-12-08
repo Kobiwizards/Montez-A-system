@@ -1,3 +1,12 @@
+#!/bin/bash
+
+echo "í´§ Fixing dashboard buttons..."
+
+# Create a backup
+cp app/tenant/dashboard/page.tsx app/tenant/dashboard/page.tsx.backup
+
+# Update the Pay Now buttons
+cat > app/tenant/dashboard/page.tsx << 'EOF'
 "use client"
 
 import { useState, useEffect } from 'react'
@@ -246,3 +255,8 @@ export default function TenantDashboard() {
     </div>
   )
 }
+EOF
+
+echo "âœ… Fixed Pay Now buttons"
+echo "âœ… Fixed BalanceCard props"
+echo "í³ Backup created at: app/tenant/dashboard/page.tsx.backup"

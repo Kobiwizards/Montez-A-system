@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Upload, 
-  CreditCard, 
-  Cash, 
-  Smartphone, 
+import {
+  Upload,
+  CreditCard,
+  Banknote,
+  Smartphone,
   AlertCircle,
   CheckCircle,
-  FileText
+  FileText,
+  User
 } from 'lucide-react'
 import { Header } from '@/components/shared/header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,7 +22,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FileUpload } from '@/components/shared/file-upload'
-import { CashPaymentForm } from '@/components/tenant/cash-payment-form'
 import { useToast } from '@/lib/hooks/use-toast'
 
 const PAYMENT_TYPES = [
@@ -32,20 +32,26 @@ const PAYMENT_TYPES = [
 
 const PAYMENT_METHODS = [
   { id: 'mpesa', label: 'M-Pesa', icon: Smartphone, description: 'Mobile money transfer' },
-  { id: 'cash', label: 'Cash', icon: Cash, description: 'Physical cash payment' },
-  { id: 'bank', label: 'Bank Transfer', icon: CreditCard, description: 'Direct bank transfer' },
+  { id: 'cash', label: 'Cash', icon: Banknote, description: 'Physical cash payment' },
+]
+
+// Caretakers list
+const CARETAKERS = [
+  { id: 'mwarabu', name: 'Mwarabu', phone: '0712 345 678' },
+  { id: 'other', name: 'Other Caretaker', phone: '' },
 ]
 
 export default function NewPaymentPage() {
   const router = useRouter()
   const { toast } = useToast()
-  
+
   const [paymentType, setPaymentType] = useState('rent')
   const [paymentMethod, setPaymentMethod] = useState('mpesa')
   const [amount, setAmount] = useState('15000')
   const [month, setMonth] = useState('')
   const [description, setDescription] = useState('')
   const [transactionCode, setTransactionCode] = useState('')
+  const [caretaker, setCaretaker] = useState('mwarabu')
   const [files, setFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -56,18 +62,22 @@ export default function NewPaymentPage() {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
+
       toast({
         title: "Payment Submitted!",
         description: "Your payment has been submitted for verification.",
+        type: 'success'
       })
-      
-      router.push('/tenant/payments')
+
+      // Redirect after showing toast
+      setTimeout(() => {
+        router.push('/tenant/payments')
+      }, 2000)
     } catch (error) {
       toast({
         title: "Submission Failed",
         description: "Please try again or contact support.",
-        variant: "destructive",
+        type: 'error'
       })
     } finally {
       setIsSubmitting(false)
@@ -82,7 +92,7 @@ export default function NewPaymentPage() {
   return (
     <div className="min-h-screen bg-gradient-dark">
       <Header />
-      
+
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
@@ -154,7 +164,7 @@ export default function NewPaymentPage() {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="month">Payment Month</Label>
                     <Input
@@ -196,7 +206,7 @@ export default function NewPaymentPage() {
                 <RadioGroup
                   value={paymentMethod}
                   onValueChange={setPaymentMethod}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
                 >
                   {PAYMENT_METHODS.map((method) => {
                     const Icon = method.icon
@@ -247,7 +257,7 @@ export default function NewPaymentPage() {
                         />
                       </div>
                     </div>
-                    
+
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
@@ -257,9 +267,54 @@ export default function NewPaymentPage() {
                   </div>
                 )}
 
-                {/* Cash Payment Form */}
+                {/* Cash Payment - Simple Caretaker Selection */}
                 {paymentMethod === 'cash' && (
-                  <CashPaymentForm />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="caretaker">
+                          <User className="h-4 w-4 inline mr-2" />
+                          Caretaker Received Payment
+                        </Label>
+                        <Select value={caretaker} onValueChange={setCaretaker}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select caretaker" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CARETAKERS.map((ct) => (
+                              <SelectItem key={ct.id} value={ct.id}>
+                                <div className="flex items-center gap-2">
+                                  <span>{ct.name}</span>
+                                  {ct.phone && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {ct.phone}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cashDate">Payment Date</Label>
+                        <Input
+                          id="cashDate"
+                          type="date"
+                          defaultValue={new Date().toISOString().split('T')[0]}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Please upload a clear photo of the receipt provided by the caretaker.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -281,7 +336,7 @@ export default function NewPaymentPage() {
                   maxFiles={5}
                   accept="image/*,.pdf"
                 />
-                
+
                 <div className="mt-6 p-4 rounded-lg bg-primary/5 border border-primary/10">
                   <div className="flex items-start gap-3">
                     <FileText className="h-5 w-5 text-primary mt-0.5" />
@@ -289,7 +344,6 @@ export default function NewPaymentPage() {
                       <p className="font-medium mb-1">Upload Guidelines</p>
                       <ul className="text-sm text-muted-foreground space-y-1">
                         <li>• Clear screenshots of M-Pesa confirmation messages</li>
-                        <li>• Bank transfer slips or receipts</li>
                         <li>• Cash payment receipts with caretaker signature</li>
                         <li>• Multiple files can be uploaded for a single payment</li>
                         <li>• Maximum file size: 5MB each</li>
@@ -301,9 +355,9 @@ export default function NewPaymentPage() {
             </Card>
 
             {/* Submission */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 rounded-lg bg-secondary-800/50 border border-secondary-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 rounded-lg bg-secondary-800/50 border border-secondary-700">      
               <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-success" />
+                <CheckCircle className="h-5 w-5 text-green-500" />
                 <div>
                   <p className="font-medium">Ready to submit</p>
                   <p className="text-sm text-muted-foreground">
@@ -311,7 +365,7 @@ export default function NewPaymentPage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -322,7 +376,7 @@ export default function NewPaymentPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="btn-primary gap-2"
+                  className="gap-2"
                   disabled={isSubmitting || files.length === 0}
                 >
                   {isSubmitting ? 'Submitting...' : 'Submit Payment'}

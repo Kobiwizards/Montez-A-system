@@ -1,42 +1,42 @@
-import { PrismaClient, UserRole, UnitType, TenantStatus, PaymentType, PaymentMethod, PaymentStatus } from '@prisma/client'
+import { PrismaClient, UserRole, UnitType, TenantStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 const MONTEZ_A_APARTMENTS = [
   // Floor 1
-  { number: '1A1', floor: 1, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '1A2', floor: 1, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '1B1', floor: 1, type: UnitType.ONE_BEDROOM, rent: 15000 },
-  { number: '1B2', floor: 1, type: UnitType.ONE_BEDROOM, rent: 15000 },
+  { number: '1A1', floor: 1, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '1A2', floor: 1, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '1B1', floor: 1, type: 'ONE_BEDROOM' as const, rent: 15000 },
+  { number: '1B2', floor: 1, type: 'ONE_BEDROOM' as const, rent: 15000 },
   
   // Floor 2
-  { number: '2A1', floor: 2, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '2A2', floor: 2, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '2B1', floor: 2, type: UnitType.ONE_BEDROOM, rent: 15000 },
-  { number: '2B2', floor: 2, type: UnitType.ONE_BEDROOM, rent: 15000 },
+  { number: '2A1', floor: 2, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '2A2', floor: 2, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '2B1', floor: 2, type: 'ONE_BEDROOM' as const, rent: 15000 },
+  { number: '2B2', floor: 2, type: 'ONE_BEDROOM' as const, rent: 15000 },
   
   // Floor 3
-  { number: '3A1', floor: 3, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '3A2', floor: 3, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '3B1', floor: 3, type: UnitType.ONE_BEDROOM, rent: 15000 },
-  { number: '3B2', floor: 3, type: UnitType.ONE_BEDROOM, rent: 15000 },
+  { number: '3A1', floor: 3, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '3A2', floor: 3, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '3B1', floor: 3, type: 'ONE_BEDROOM' as const, rent: 15000 },
+  { number: '3B2', floor: 3, type: 'ONE_BEDROOM' as const, rent: 15000 },
   
   // Floor 4
-  { number: '4A1', floor: 4, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '4A2', floor: 4, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '4B1', floor: 4, type: UnitType.ONE_BEDROOM, rent: 15000 },
-  { number: '4B2', floor: 4, type: UnitType.ONE_BEDROOM, rent: 15000 },
+  { number: '4A1', floor: 4, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '4A2', floor: 4, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '4B1', floor: 4, type: 'ONE_BEDROOM' as const, rent: 15000 },
+  { number: '4B2', floor: 4, type: 'ONE_BEDROOM' as const, rent: 15000 },
   
   // Floor 5
-  { number: '5A1', floor: 5, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '5A2', floor: 5, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '5B1', floor: 5, type: UnitType.ONE_BEDROOM, rent: 15000 },
-  { number: '5B2', floor: 5, type: UnitType.ONE_BEDROOM, rent: 15000 },
+  { number: '5A1', floor: 5, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '5A2', floor: 5, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '5B1', floor: 5, type: 'ONE_BEDROOM' as const, rent: 15000 },
+  { number: '5B2', floor: 5, type: 'ONE_BEDROOM' as const, rent: 15000 },
   
   // Rooftop
-  { number: '6A1', floor: 6, type: UnitType.TWO_BEDROOM, rent: 18000 },
-  { number: '6A2', floor: 6, type: UnitType.TWO_BEDROOM, rent: 18000 },
+  { number: '6A1', floor: 6, type: 'TWO_BEDROOM' as const, rent: 18000 },
+  { number: '6A2', floor: 6, type: 'TWO_BEDROOM' as const, rent: 18000 },
 ]
 
 const tenantNames = [
@@ -49,7 +49,7 @@ const tenantNames = [
 ]
 
 async function main() {
-  console.log('Ìº± Starting database seeding...')
+  console.log('üå± Starting database seeding...')
   
   // Clear existing data (in correct order due to foreign key constraints)
   await prisma.auditLog.deleteMany()
@@ -61,7 +61,7 @@ async function main() {
   await prisma.payment.deleteMany()
   await prisma.user.deleteMany()
   
-  console.log('Ì∑ëÔ∏è Cleared existing data')
+  console.log('üóëÔ∏è Cleared existing data')
   
   // Create admin user
   const hashedAdminPassword = await bcrypt.hash('admin123', 10)
@@ -81,7 +81,7 @@ async function main() {
       moveInDate: new Date(),
     }
   })
-  console.log(`Ì±ë Created admin user: ${admin.email}`)
+  console.log(`üëë Created admin user: ${admin.email}`)
   
   // Create tenants for each apartment
   const tenants = []
@@ -119,32 +119,30 @@ async function main() {
         moveInDate,
         leaseEndDate,
         emergencyContact: `2547${20000000 + i}`,
-        notes: `Tenant for ${apartment.number} - ${apartment.type}`
+        notes: `Tenant for ${apartment.number} - ${apartment.type.replace('_', ' ')}`
       }
     })
     
     tenants.push(tenant)
-    console.log(`Ìø† Created tenant: ${tenant.name} in ${tenant.apartment}`)
+    console.log(`üè† Created tenant: ${tenant.name} in ${tenant.apartment}`)
     
     // Create payments for the tenant (last 3 months)
     const months = ['2024-01', '2024-02', '2024-03']
     for (const month of months) {
-      const paymentStatus = Math.random() > 0.1 ? PaymentStatus.VERIFIED : PaymentStatus.PENDING // 90% verified, 10% pending
-      const isVerified = paymentStatus === PaymentStatus.VERIFIED
-      const method = Math.random() > 0.3 ? PaymentMethod.MPESA : PaymentMethod.CASH // 70% M-Pesa, 30% cash
+      const paymentStatus = Math.random() > 0.1 ? 'VERIFIED' : 'PENDING' // 90% verified, 10% pending
+      const isVerified = paymentStatus === 'VERIFIED'
       
       const payment = await prisma.payment.create({
         data: {
           tenantId: tenant.id,
-          type: PaymentType.RENT,
-          method: method,
+          type: 'RENT',
+          method: Math.random() > 0.3 ? 'MPESA' : 'CASH', // 70% M-Pesa, 30% cash
           amount: apartment.rent,
           currency: 'KES',
           month,
           year: parseInt(month.split('-')[0]),
           description: `Rent payment for ${month}`,
-          transactionCode: isVerified && method === PaymentMethod.MPESA ? `MP${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null,
-          caretakerName: !isVerified && method === PaymentMethod.CASH ? 'Mwarabu' : null,
+          transactionCode: paymentStatus === 'VERIFIED' ? `MP${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null,
           status: paymentStatus,
           screenshotUrls: isVerified ? [`/uploads/${tenant.id}/payment-${month}.jpg`] : [],
           verifiedAt: isVerified ? new Date() : null,
@@ -157,7 +155,7 @@ async function main() {
         await prisma.receipt.create({
           data: {
             paymentId: payment.id,
-            tenantId: tenant.id,
+            tenantId: tenant.id, // ‚Üê ADDED: Required field
             receiptNumber: `MTA-${month.replace('-', '')}-${String(i+1).padStart(3, '0')}`,
             filePath: `/receipts/${payment.id}.pdf`,
             generatedAt: new Date(),
@@ -215,7 +213,7 @@ async function main() {
     }
   })
   
-  console.log('Ì≥ä Created analytics snapshot')
+  console.log('üìä Created analytics snapshot')
   
   // Create some maintenance requests
   const maintenanceTitles = [
@@ -245,7 +243,7 @@ async function main() {
     })
   }
   
-  console.log('Ì¥ß Created maintenance requests')
+  console.log('üîß Created maintenance requests')
   
   // Create some notifications
   for (let i = 0; i < 10; i++) {
@@ -263,15 +261,15 @@ async function main() {
     })
   }
   
-  console.log('Ì¥î Created notifications')
+  console.log('üîî Created notifications')
   
   console.log('‚úÖ Database seeding completed!')
-  console.log(`Ì±• Created: ${tenants.length + 1} users`)
-  console.log(`Ì≤≥ Created: ${tenants.length * 3} payments`)
-  console.log(`Ì∑æ Created: ${tenants.length * 3} receipts`)
-  console.log(`Ì≤ß Created: ${tenants.length * 3} water readings`)
-  console.log(`Ì¥ß Created: 5 maintenance requests`)
-  console.log(`Ì¥î Created: 10 notifications`)
+  console.log(`üë• Created: ${tenants.length + 1} users`)
+  console.log(`üí≥ Created: ${tenants.length * 3} payments`)
+  console.log(`üßæ Created: ${tenants.length * 3} receipts`)
+  console.log(`üíß Created: ${tenants.length * 3} water readings`)
+  console.log(`üîß Created: 5 maintenance requests`)
+  console.log(`üîî Created: 10 notifications`)
 }
 
 main()

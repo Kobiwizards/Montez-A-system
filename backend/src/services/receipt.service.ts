@@ -33,6 +33,7 @@ export class ReceiptService {
     const receipt = await prisma.receipt.create({
       data: {
         paymentId: payment.id,
+        tenantId: payment.tenantId, // Make sure to include tenantId
         receiptNumber,
         filePath: fileName,
         generatedAt: new Date(),
@@ -67,113 +68,117 @@ export class ReceiptService {
     receiptNumber: string,
     filePath: string
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50, size: 'A4' })
-      const stream = fs.createWriteStream(filePath)
+    return new Promise(async (resolve, reject) => { // Added async here
+      try {
+        const doc = new PDFDocument({ margin: 50, size: 'A4' })
+        const stream = fs.createWriteStream(filePath)
 
-      doc.pipe(stream)
+        doc.pipe(stream)
 
-      // Header
-      doc.fontSize(20).text(config.appName, { align: 'center' })
-      doc.moveDown(0.5)
-      doc.fontSize(16).text('Official Receipt', { align: 'center' })
-      doc.moveDown(1)
+        // Header
+        doc.fontSize(20).text(config.appName, { align: 'center' })
+        doc.moveDown(0.5)
+        doc.fontSize(16).text('Official Receipt', { align: 'center' })
+        doc.moveDown(1)
 
-      // Receipt Number
-      doc.fontSize(12).text(`Receipt Number: ${receiptNumber}`, { align: 'right' })
-      doc.moveDown(1)
+        // Receipt Number
+        doc.fontSize(12).text(`Receipt Number: ${receiptNumber}`, { align: 'right' })
+        doc.moveDown(1)
 
-      // Divider
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
-      doc.moveDown(1)
+        // Divider
+        doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke()
+        doc.moveDown(1)
 
-      // Property Details
-      doc.fontSize(12).text('Property Details:', { underline: true })
-      doc.moveDown(0.5)
-      doc.fontSize(10).text(`Montez A Apartments`)
-      doc.text(`Kizito Road`)
-      doc.text(`Nairobi, Kenya`)
-      doc.moveDown(1)
+        // Property Details
+        doc.fontSize(12).text('Property Details:', { underline: true })
+        doc.moveDown(0.5)
+        doc.fontSize(10).text(`Montez A Apartments`)
+        doc.text(`Kizito Road`)
+        doc.text(`Nairobi, Kenya`)
+        doc.moveDown(1)
 
-      // Tenant Details
-      doc.fontSize(12).text('Tenant Details:', { underline: true })
-      doc.moveDown(0.5)
-      doc.fontSize(10).text(`Name: ${payment.tenant.name}`)
-      doc.text(`Apartment: ${payment.tenant.apartment}`)
-      doc.text(`Email: ${payment.tenant.email}`)
-      doc.text(`Phone: ${payment.tenant.phone}`)
-      doc.moveDown(1)
+        // Tenant Details
+        doc.fontSize(12).text('Tenant Details:', { underline: true })
+        doc.moveDown(0.5)
+        doc.fontSize(10).text(`Name: ${payment.tenant.name}`)
+        doc.text(`Apartment: ${payment.tenant.apartment}`)
+        doc.text(`Email: ${payment.tenant.email}`)
+        doc.text(`Phone: ${payment.tenant.phone}`)
+        doc.moveDown(1)
 
-      // Payment Details
-      doc.fontSize(12).text('Payment Details:', { underline: true })
-      doc.moveDown(0.5)
+        // Payment Details
+        doc.fontSize(12).text('Payment Details:', { underline: true })
+        doc.moveDown(0.5)
 
-      const paymentDetails = [
-        ['Payment Type', payment.type],
-        ['Payment Method', payment.method],
-        ['Amount', `KSh ${payment.amount.toLocaleString()}`],
-        ['Month', payment.month],
-        ['Date Paid', new Date(payment.createdAt).toLocaleDateString()],
-      ]
+        const paymentDetails = [
+          ['Payment Type', payment.type],
+          ['Payment Method', payment.method],
+          ['Amount', `KSh ${payment.amount.toLocaleString()}`],
+          ['Month', payment.month],
+          ['Date Paid', new Date(payment.createdAt).toLocaleDateString()],
+        ]
 
-      if (payment.transactionCode) {
-        paymentDetails.push(['Transaction Code', payment.transactionCode])
-      }
+        if (payment.transactionCode) {
+          paymentDetails.push(['Transaction Code', payment.transactionCode])
+        }
 
-      if (payment.caretakerName) {
-        paymentDetails.push(['Caretaker Name', payment.caretakerName])
-      }
+        if (payment.caretakerName) {
+          paymentDetails.push(['Caretaker Name', payment.caretakerName])
+        }
 
-      paymentDetails.forEach(([label, value]) => {
-        doc.fontSize(10).text(`${label}:`, { continued: true })
-        doc.text(` ${value}`, { align: 'right' })
-      })
-
-      doc.moveDown(2)
-
-      // Water details if applicable
-      if (payment.type === 'WATER' || payment.type === 'RENT') {
-        const waterReadings = await prisma.waterReading.findMany({
-          where: {
-            tenantId: payment.tenantId,
-            month: payment.month,
-          },
+        paymentDetails.forEach(([label, value]) => {
+          doc.fontSize(10).text(`${label}:`, { continued: true })
+          doc.text(` ${value}`, { align: 'right' })
         })
 
-        if (waterReadings.length > 0) {
-          doc.fontSize(12).text('Water Consumption:', { underline: true })
-          doc.moveDown(0.5)
+        doc.moveDown(2)
 
-          waterReadings.forEach(reading => {
-            doc.fontSize(10).text(`Units: ${reading.units} x KSh ${reading.rate} = KSh ${reading.amount.toLocaleString()}`)
+        // Water details if applicable
+        if (payment.type === 'WATER' || payment.type === 'RENT') {
+          const waterReadings = await prisma.waterReading.findMany({
+            where: {
+              tenantId: payment.tenantId,
+              month: payment.month,
+            },
           })
-          doc.moveDown(1)
+
+          if (waterReadings.length > 0) {
+            doc.fontSize(12).text('Water Consumption:', { underline: true })
+            doc.moveDown(0.5)
+
+            waterReadings.forEach(reading => {
+              doc.fontSize(10).text(`Units: ${reading.units} x KSh ${reading.rate} = KSh ${reading.amount.toLocaleString()}`)
+            })
+            doc.moveDown(1)
+          }
         }
+
+        // Amount in words
+        doc.fontSize(10).text(`Amount in Words: ${this.numberToWords(payment.amount)} Kenya Shillings`)
+        doc.moveDown(2)
+
+        // Total
+        doc.fontSize(14).text(`Total: KSh ${payment.amount.toLocaleString()}`, { align: 'right', bold: true })
+        doc.moveDown(3)
+
+        // Footer
+        doc.fontSize(10).text('For Office Use Only:', { underline: true })
+        doc.moveDown(0.5)
+        doc.text(`Received by: _________________________`)
+        doc.text(`Date: ${new Date().toLocaleDateString()}`)
+        doc.text(`Signature: _________________________`)
+        doc.moveDown(2)
+
+        doc.fontSize(8).text('This is a computer generated receipt. No signature required.', { align: 'center' })
+        doc.text('Thank you for your payment!', { align: 'center' })
+
+        doc.end()
+
+        stream.on('finish', resolve)
+        stream.on('error', reject)
+      } catch (error) {
+        reject(error)
       }
-
-      // Amount in words
-      doc.fontSize(10).text(`Amount in Words: ${this.numberToWords(payment.amount)} Kenya Shillings`)
-      doc.moveDown(2)
-
-      // Total
-      doc.fontSize(14).text(`Total: KSh ${payment.amount.toLocaleString()}`, { align: 'right', bold: true })
-      doc.moveDown(3)
-
-      // Footer
-      doc.fontSize(10).text('For Office Use Only:', { underline: true })
-      doc.moveDown(0.5)
-      doc.text(`Received by: _________________________`)
-      doc.text(`Date: ${new Date().toLocaleDateString()}`)
-      doc.text(`Signature: _________________________`)
-      doc.moveDown(2)
-
-      doc.fontSize(8).text('This is a computer generated receipt. No signature required.', { align: 'center' })
-      doc.text('Thank you for your payment!', { align: 'center' })
-
-      doc.end()
-
-      stream.on('finish', resolve)
-      stream.on('error', reject)
     })
   }
 

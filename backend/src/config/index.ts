@@ -10,16 +10,16 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // Database
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/montez_a_db',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://montez_a_db_user:T87pOFxrcTBECwCfQtnopJCnBiXoywpw@dpg-d4r141qli9vc73a60960-a/montez_a_db?sslmode=require',
   
   // JWT
-  jwtSecret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production',
+  jwtSecret: process.env.JWT_SECRET || '5900f9f295d1542943203c2e227d4bd6',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || 'your-refresh-token-secret-change-this',
+  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || '4686b297b5ab30ea3bdb0f558953ac2f',
   refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
   
-  // CORS
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  // CORS - Allow both local and production
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000,https://montez-a.onrender.com',
   
   // File upload
   maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880'), // 5MB

@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  
+
   const { login } = useAuth()
   const router = useRouter()
 
@@ -31,8 +31,10 @@ export default function LoginPage() {
       if (!success) {
         setError('Invalid credentials. Please try again.')
       }
+      // Note: Successful login will redirect automatically from auth provider
     } catch (err) {
       setError('An error occurred. Please try again.')
+      console.error('Login error:', err)
     } finally {
       setIsLoading(false)
     }
@@ -121,14 +123,14 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-secondary-800">
             <div className="text-center text-sm text-muted-foreground">
-              <p className="mb-4">Choose your role:</p>
+              <p className="mb-4">Demo Credentials:</p>
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    setEmail('tenant@monteza.com')
+                    setEmail('john.kamau@monteza.com')
                     setPassword('password123')
                   }}
                 >

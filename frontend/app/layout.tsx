@@ -4,6 +4,7 @@ import './globals.css'
 import { ThemeProvider } from '@/components/shared/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/components/shared/auth-provider'
+import { ApiProvider } from '@/lib/api/context'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -41,10 +42,12 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
+          <ApiProvider>
+            <AuthProvider>
+              {children}
+              <Toaster />
+            </AuthProvider>
+          </ApiProvider>
         </ThemeProvider>
       </body>
     </html>

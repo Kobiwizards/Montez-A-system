@@ -13,6 +13,7 @@
     "studio": "prisma studio",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
+    "deploy": "bash render-deploy.sh",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -33,7 +34,8 @@
     "nodemailer": "^6.9.7",
     "pdfkit": "^0.14.0",
     "ws": "^8.14.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -46,7 +48,7 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.10.5",
     "@types/nodemailer": "^6.4.14",
-        "@types/pdfkit": "^0.13.3",
+    "@types/pdfkit": "^0.13.3",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",

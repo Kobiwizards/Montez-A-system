@@ -37,9 +37,21 @@ export const createApp = () => {
   app.use(express.json({ limit: '10mb' }))
   app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-  // CORS configuration
+  // CORS configuration - Handle multiple origins
+  const allowedOrigins = config.corsOrigin.split(',').map(origin => origin.trim())
+  
   app.use(cors({
-    origin: config.corsOrigin,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true)
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        console.log('Blocked by CORS:', origin)
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

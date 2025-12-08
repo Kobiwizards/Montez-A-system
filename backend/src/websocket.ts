@@ -16,9 +16,99 @@ interface Message {
   data: any
 }
 
-export function setupWebSocket(server: Server) {
+interface WebSocketFunctions {
+  sendToClient: (userId: string, message: Message) => void
+  broadcastToRole: (role: string, message: Message) => void
+  broadcastToAll: (message: Message) => void
+  notifyPaymentCreated: (payment: any) => void
+  notifyPaymentVerified: (payment: any) => void
+  notifyMaintenanceCreated: (request: any) => void
+  notifyMaintenanceUpdated: (request: any) => void
+  notifyNotificationCreated: (notification: any) => void
+  sendSystemAlert: (message: string, type?: 'info' | 'warning' | 'error') => void
+}
+
+let webSocketFunctions: WebSocketFunctions | null = null
+
+export function setupWebSocket(server: Server): WebSocketFunctions {
   const wss = new WebSocketServer({ server })
   const clients = new Map<string, Client>()
+
+  function sendToClient(userId: string, message: Message) {
+    const client = clients.get(userId)
+    if (client && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(JSON.stringify(message))
+    }
+  }
+
+  function broadcastToRole(role: string, message: Message) {
+    clients.forEach((client) => {
+      if (client.role === role && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(message))
+      }
+    })
+  }
+
+  function broadcastToAll(message: Message) {
+    clients.forEach((client) => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(message))
+      }
+    })
+  }
+
+  function notifyPaymentCreated(payment: any) {
+    // Notify admin
+    broadcastToRole('ADMIN', {
+      type: 'payment_created',
+      data: payment,
+    })
+
+    // Notify the specific tenant
+    sendToClient(payment.tenantId, {
+      type: 'payment_submitted',
+      data: payment,
+    })
+  }
+
+  function notifyPaymentVerified(payment: any) {
+    // Notify the tenant
+    sendToClient(payment.tenantId, {
+      type: 'payment_verified',
+      data: payment,
+    })
+  }
+
+  function notifyMaintenanceCreated(request: any) {
+    // Notify admin
+    broadcastToRole('ADMIN', {
+      type: 'maintenance_created',
+      data: request,
+    })
+  }
+
+  function notifyMaintenanceUpdated(request: any) {
+    // Notify the tenant
+    sendToClient(request.tenantId, {
+      type: 'maintenance_updated',
+      data: request,
+    })
+  }
+
+  function notifyNotificationCreated(notification: any) {
+    // Notify the specific user
+    sendToClient(notification.userId, {
+      type: 'notification_created',
+      data: notification,
+    })
+  }
+
+  function sendSystemAlert(message: string, type: 'info' | 'warning' | 'error' = 'info') {
+    broadcastToAll({
+      type: 'system_alert',
+      data: { message, type, timestamp: new Date().toISOString() },
+    })
+  }
 
   wss.on('connection', async (ws: WebSocket, request) => {
     try {
@@ -99,90 +189,8 @@ export function setupWebSocket(server: Server) {
     }
   }
 
-  function sendToClient(userId: string, message: Message) {
-    const client = clients.get(userId)
-    if (client && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(JSON.stringify(message))
-    }
-  }
-
-  function broadcastToRole(role: string, message: Message) {
-    clients.forEach((client) => {
-      if (client.role === role && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify(message))
-      }
-    })
-  }
-
-  function broadcastToAll(message: Message) {
-    clients.forEach((client) => {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify(message))
-      }
-    })
-  }
-
-  // Function to notify about new payment
-  export function notifyPaymentCreated(payment: any) {
-    // Notify admin
-    broadcastToRole('ADMIN', {
-      type: 'payment_created',
-      data: payment,
-    })
-
-    // Notify the specific tenant
-    sendToClient(payment.tenantId, {
-      type: 'payment_submitted',
-      data: payment,
-    })
-  }
-
-  // Function to notify about payment verification
-  export function notifyPaymentVerified(payment: any) {
-    // Notify the tenant
-    sendToClient(payment.tenantId, {
-      type: 'payment_verified',
-      data: payment,
-    })
-  }
-
-  // Function to notify about new maintenance request
-  export function notifyMaintenanceCreated(request: any) {
-    // Notify admin
-    broadcastToRole('ADMIN', {
-      type: 'maintenance_created',
-      data: request,
-    })
-  }
-
-  // Function to notify about maintenance update
-  export function notifyMaintenanceUpdated(request: any) {
-    // Notify the tenant
-    sendToClient(request.tenantId, {
-      type: 'maintenance_updated',
-      data: request,
-    })
-  }
-
-  // Function to notify about new notification
-  export function notifyNotificationCreated(notification: any) {
-    // Notify the specific user
-    sendToClient(notification.userId, {
-      type: 'notification_created',
-      data: notification,
-    })
-  }
-
-  // Function to send system alert
-  export function sendSystemAlert(message: string, type: 'info' | 'warning' | 'error' = 'info') {
-    broadcastToAll({
-      type: 'system_alert',
-      data: { message, type, timestamp: new Date().toISOString() },
-    })
-  }
-
-  // Export WebSocket functions
-  return {
+  // Store functions globally so they can be accessed from other files
+  webSocketFunctions = {
     sendToClient,
     broadcastToRole,
     broadcastToAll,
@@ -192,5 +200,49 @@ export function setupWebSocket(server: Server) {
     notifyMaintenanceUpdated,
     notifyNotificationCreated,
     sendSystemAlert,
+  }
+
+  return webSocketFunctions
+}
+
+// Export individual functions that can be used elsewhere
+export function getWebSocketFunctions(): WebSocketFunctions | null {
+  return webSocketFunctions
+}
+
+// Convenience functions that use the stored functions
+export function notifyPaymentCreated(payment: any) {
+  if (webSocketFunctions) {
+    webSocketFunctions.notifyPaymentCreated(payment)
+  }
+}
+
+export function notifyPaymentVerified(payment: any) {
+  if (webSocketFunctions) {
+    webSocketFunctions.notifyPaymentVerified(payment)
+  }
+}
+
+export function notifyMaintenanceCreated(request: any) {
+  if (webSocketFunctions) {
+    webSocketFunctions.notifyMaintenanceCreated(request)
+  }
+}
+
+export function notifyMaintenanceUpdated(request: any) {
+  if (webSocketFunctions) {
+    webSocketFunctions.notifyMaintenanceUpdated(request)
+  }
+}
+
+export function notifyNotificationCreated(notification: any) {
+  if (webSocketFunctions) {
+    webSocketFunctions.notifyNotificationCreated(notification)
+  }
+}
+
+export function sendSystemAlert(message: string, type: 'info' | 'warning' | 'error' = 'info') {
+  if (webSocketFunctions) {
+    webSocketFunctions.sendSystemAlert(message, type)
   }
 }
