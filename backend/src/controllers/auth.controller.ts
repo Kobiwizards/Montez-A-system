@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
-import { config } from '../config'
+import { config } from '../config/index'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 
@@ -13,7 +13,7 @@ export class AuthController {
     this.auditLogService = new AuditLogService()
   }
 
-  login = async (req: Request, res: Response) => {
+  login = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { email, password } = req.body
 
@@ -65,7 +65,7 @@ export class AuthController {
         { expiresIn: config.refreshTokenExpiresIn }
       )
 
-      // Update last login time (you might want to add this field to User model)
+      // Update last login time
       await prisma.user.update({
         where: { id: user.id },
         data: { updatedAt: new Date() },
@@ -86,7 +86,7 @@ export class AuthController {
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Login successful',
         data: {
@@ -97,14 +97,14 @@ export class AuthController {
       })
     } catch (error) {
       console.error('Login error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  register = async (req: Request, res: Response) => {
+  register = async (req: Request, res: Response): Promise<Response> => {
     try {
       const {
         email,
@@ -186,21 +186,21 @@ export class AuthController {
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Tenant registered successfully',
         data: userWithoutPassword,
       })
     } catch (error) {
       console.error('Registration error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  getProfile = async (req: AuthRequest, res: Response) => {
+  getProfile = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -238,20 +238,20 @@ export class AuthController {
       // Remove password from response
       const { password, ...userWithoutPassword } = user
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: userWithoutPassword,
       })
     } catch (error) {
       console.error('Get profile error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  updateProfile = async (req: AuthRequest, res: Response) => {
+  updateProfile = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -289,21 +289,21 @@ export class AuthController {
       // Remove password from response
       const { password, ...userWithoutPassword } = user
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Profile updated successfully',
         data: userWithoutPassword,
       })
     } catch (error) {
       console.error('Update profile error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  changePassword = async (req: AuthRequest, res: Response) => {
+  changePassword = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -357,20 +357,20 @@ export class AuthController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Password changed successfully',
       })
     } catch (error) {
       console.error('Change password error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })
     }
   }
 
-  logout = async (req: AuthRequest, res: Response) => {
+  logout = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -391,13 +391,13 @@ export class AuthController {
         userAgent: req.get('user-agent'),
       })
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Logged out successfully',
       })
     } catch (error) {
       console.error('Logout error:', error)
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error',
       })

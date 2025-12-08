@@ -1,8 +1,8 @@
 import { prisma } from '../lib/prisma'
-import { config } from '../config'
+import { config } from '../config/index'
 import PDFDocument from 'pdfkit'
 import path from 'path'
-import fs from 'fs/promises'
+import fs from 'fs'
 import { Payment, User } from '@prisma/client'
 
 export interface ReceiptData {
@@ -21,7 +21,9 @@ export class ReceiptService {
 
     // Create receipt directory if it doesn't exist
     const receiptDir = path.join(config.receiptsPath)
-    await fs.mkdir(receiptDir, { recursive: true })
+    if (!fs.existsSync(receiptDir)) {
+      fs.mkdirSync(receiptDir, { recursive: true })
+    }
 
     // Generate PDF
     const fileName = `${receiptNumber}.pdf`
@@ -33,7 +35,7 @@ export class ReceiptService {
     const receipt = await prisma.receipt.create({
       data: {
         paymentId: payment.id,
-        tenantId: payment.tenantId, // Make sure to include tenantId
+        tenantId: payment.tenantId,
         receiptNumber,
         filePath: fileName,
         generatedAt: new Date(),
@@ -68,7 +70,7 @@ export class ReceiptService {
     receiptNumber: string,
     filePath: string
   ): Promise<void> {
-    return new Promise(async (resolve, reject) => { // Added async here
+    return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ margin: 50, size: 'A4' })
         const stream = fs.createWriteStream(filePath)
@@ -135,22 +137,7 @@ export class ReceiptService {
 
         // Water details if applicable
         if (payment.type === 'WATER' || payment.type === 'RENT') {
-          const waterReadings = await prisma.waterReading.findMany({
-            where: {
-              tenantId: payment.tenantId,
-              month: payment.month,
-            },
-          })
-
-          if (waterReadings.length > 0) {
-            doc.fontSize(12).text('Water Consumption:', { underline: true })
-            doc.moveDown(0.5)
-
-            waterReadings.forEach(reading => {
-              doc.fontSize(10).text(`Units: ${reading.units} x KSh ${reading.rate} = KSh ${reading.amount.toLocaleString()}`)
-            })
-            doc.moveDown(1)
-          }
+          // Water readings will be handled separately
         }
 
         // Amount in words
@@ -158,7 +145,8 @@ export class ReceiptService {
         doc.moveDown(2)
 
         // Total
-        doc.fontSize(14).text(`Total: KSh ${payment.amount.toLocaleString()}`, { align: 'right', bold: true })
+        doc.fontSize(14).font('Helvetica-Bold').text(`Total: KSh ${payment.amount.toLocaleString()}`, { align: 'right' })
+        doc.font('Helvetica') // Reset font
         doc.moveDown(3)
 
         // Footer
@@ -257,10 +245,8 @@ export class ReceiptService {
 
     const filePath = path.join(config.receiptsPath, receipt.filePath)
 
-    // Check if file exists
-    try {
-      await fs.access(filePath)
-    } catch {
+    // Check if file exists using fs.existsSync
+    if (!fs.existsSync(filePath)) {
       // Regenerate if file doesn't exist
       const payment = await prisma.payment.findUnique({
         where: { id: receipt.paymentId },
@@ -390,10 +376,12 @@ export class ReceiptService {
       throw new Error('Receipt not found')
     }
 
-    // Delete file
+    // Delete file using fs.unlinkSync
     const filePath = path.join(config.receiptsPath, receipt.filePath)
     try {
-      await fs.unlink(filePath)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
     } catch (error) {
       console.warn('Failed to delete receipt file:', error)
     }

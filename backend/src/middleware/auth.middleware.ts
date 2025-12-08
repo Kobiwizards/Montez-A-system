@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { config } from '../config'
+import { config } from '../config/index'
 import { prisma } from '../lib/prisma'
 
 export interface AuthRequest extends Request {
@@ -16,7 +16,7 @@ export const authenticate = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => {
+): Promise<Response | void> => {
   try {
     const authHeader = req.headers.authorization
     
@@ -114,7 +114,7 @@ export const authorize = (...roles: string[]) => {
 export const refreshToken = async (
   req: Request,
   res: Response
-) => {
+): Promise<Response> => {
   try {
     const { refreshToken } = req.body
 

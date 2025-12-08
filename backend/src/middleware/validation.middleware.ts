@@ -1,44 +1,60 @@
 import { Request, Response, NextFunction } from 'express'
-import { z, ZodError, AnyZodObject } from 'zod'
+import { z, ZodError, AnyZodObject, ZodSchema, ZodEffects } from 'zod'
 import { fromZodError } from 'zod-validation-error'
 
 // Type for validation schema with body, query, and params
 interface ValidationSchema {
-  body?: AnyZodObject
+  body?: AnyZodObject | ZodEffects<any, any>
   query?: AnyZodObject
   params?: AnyZodObject
 }
 
-export const validate = (schema: z.ZodSchema | ValidationSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const validate = (schema: ZodSchema<any> | ValidationSchema) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      // Check if it's a ZodSchema or a ValidationSchema
+      // Check if it's a ValidationSchema with body/query/params
       if ('body' in schema || 'query' in schema || 'params' in schema) {
-        // It's a ValidationSchema with body/query/params
-        const validationSchema = z.object({
+        const validationSchema = {
           body: (schema as ValidationSchema).body || z.object({}).strict(),
           query: (schema as ValidationSchema).query || z.object({}).strict(),
           params: (schema as ValidationSchema).params || z.object({}).strict(),
-        })
+        }
+
+        // Validate each part separately
+        const bodyResult = validationSchema.body?.safeParse(req.body)
+        const queryResult = validationSchema.query?.safeParse(req.query)
+        const paramsResult = validationSchema.params?.safeParse(req.params)
+
+        const errors = []
         
-        validationSchema.parse({
-          body: req.body,
-          query: req.query,
-          params: req.params,
-        })
+        if (bodyResult && !bodyResult.success) errors.push(...bodyResult.error.errors)
+        if (queryResult && !queryResult.success) errors.push(...queryResult.error.errors)
+        if (paramsResult && !paramsResult.success) errors.push(...paramsResult.error.errors)
+
+        if (errors.length > 0) {
+          const zodError = new ZodError(errors)
+          const validationError = fromZodError(zodError as any) // Type assertion
+          res.status(400).json({
+            success: false,
+            message: 'Validation failed',
+            errors: validationError.details,
+          })
+          return
+        }
       } else {
         // It's a direct ZodSchema
-        (schema as z.ZodSchema).parse(req.body)
+        (schema as ZodSchema).parse(req.body)
       }
       next()
     } catch (error) {
       if (error instanceof ZodError) {
-        const validationError = fromZodError(error)
-        return res.status(400).json({
+        const validationError = fromZodError(error as any) // Type assertion
+        res.status(400).json({
           success: false,
           message: 'Validation failed',
           errors: validationError.details,
         })
+        return
       }
       next(error)
     }

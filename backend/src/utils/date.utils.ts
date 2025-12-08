@@ -134,7 +134,7 @@ export class DateUtils {
       'yyyy/MM/dd',
     ]
     
-    for (const formatStr of formats) {
+    for (const _ of formats) {
       try {
         return new Date(dateString)
       } catch {

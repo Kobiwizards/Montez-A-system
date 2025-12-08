@@ -1,9 +1,10 @@
 import { Request, Response } from 'express'
+import bcrypt from "bcryptjs"
 import { prisma } from '../lib/prisma'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 import { EmailService } from '../services/email.service'
-import { config } from '../config'
+import { config } from '../config/index'
 
 export class TenantController {
   private auditLogService: AuditLogService

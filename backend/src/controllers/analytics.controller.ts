@@ -1,6 +1,5 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
-import { AuthRequest } from '../middleware/auth.middleware'
 import { AnalyticsService } from '../services/analytics.service'
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 
@@ -11,13 +10,9 @@ export class AnalyticsController {
     this.analyticsService = new AnalyticsService()
   }
 
-  getDashboardMetrics = async (req: Request, res: Response) => {
+  getDashboardMetrics = async (_: Request, res: Response) => {
     try {
       const currentDate = new Date()
-      const startOfCurrentMonth = startOfMonth(currentDate)
-      const endOfCurrentMonth = endOfMonth(currentDate)
-
-      // Get total units count (Montez A has 26 apartments)
       const totalUnits = 26
 
       // Get occupancy metrics
@@ -303,60 +298,59 @@ export class AnalyticsController {
   }
 
   exportReport = async (req: Request, res: Response) => {
-    try {
-      const { type, format = 'json', ...params } = req.query
+  try {
+    const { type: returnType, format = 'json', ...params } = req.query
 
-      let report: any
+    let report: any
 
-      switch (type) {
-        case 'financial':
-          report = await this.analyticsService.generateFinancialReport(params)
-          break
-        case 'occupancy':
-          report = await this.analyticsService.generateOccupancyReport()
-          break
-        case 'tenant':
-          report = await this.analyticsService.generateTenantReport()
-          break
-        case 'water':
-          report = await this.analyticsService.generateWaterConsumptionReport(params)
-          break
-        default:
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid report type',
-          })
-      }
-
-      if (format === 'csv') {
-        const csv = this.analyticsService.convertToCSV(report)
-        
-        res.setHeader('Content-Type', 'text/csv')
-        res.setHeader('Content-Disposition', `attachment; filename=${type}-report-${Date.now()}.csv`)
-        
-        return res.send(csv)
-      }
-
-      if (format === 'pdf') {
-        const pdfBuffer = await this.analyticsService.generatePDFReport(report, type as string)
-        
-        res.setHeader('Content-Type', 'application/pdf')
-        res.setHeader('Content-Disposition', `attachment; filename=${type}-report-${Date.now()}.pdf`)
-        
-        return res.send(pdfBuffer)
-      }
-
-      // Default to JSON
-      res.status(200).json({
-        success: true,
-        data: report,
-      })
-    } catch (error) {
-      console.error('Export report error:', error)
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      })
+    switch (returnType) {
+      case 'financial':
+        report = await this.analyticsService.generateFinancialReport(params)
+        break
+      case 'occupancy':
+        report = await this.analyticsService.generateOccupancyReport()
+        break
+      case 'tenant':
+        report = await this.analyticsService.generateTenantReport()
+        break
+      case 'water':
+        report = await this.analyticsService.generateWaterConsumptionReport(params)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid report type',
+        })
     }
+
+    if (format === 'csv') {
+      const csv = this.analyticsService.convertToCSV(report)
+      
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', `attachment; filename=${returnType}-report-${Date.now()}.csv`)
+      
+      return res.send(csv)
+    }
+
+    if (format === 'pdf') {
+      const pdfBuffer = await this.analyticsService.generatePDFReport(report, returnType as string)
+      
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename=${returnType}-report-${Date.now()}.pdf`)
+      
+      return res.send(pdfBuffer)
+    }
+
+    // Default to JSON
+    res.status(200).json({
+      success: true,
+      data: report,
+    })
+  } catch (error) {
+    console.error('Export report error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    })
   }
 }

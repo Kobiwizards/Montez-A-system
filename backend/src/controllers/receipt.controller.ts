@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { ReceiptService } from '../services/receipt.service'
 import { AuditLogService } from '../services/audit.service'
-import { config } from '../config'
+import { config } from '../config/index'
 import path from 'path'
 import fs from 'fs/promises'
 

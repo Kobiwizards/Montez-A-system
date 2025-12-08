@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
-import { NotFoundError } from './error.middleware'
 
-export const notFoundHandler = (req: Request, res: Response) => {
-  throw new NotFoundError(`Route ${req.method} ${req.originalUrl} not found`)
+export const notFoundHandler = (_req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  })
 }

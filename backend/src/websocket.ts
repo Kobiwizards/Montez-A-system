@@ -2,8 +2,6 @@ import { Server } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import jwt from 'jsonwebtoken'
 import { config } from './config'
-import { prisma } from './lib/prisma'
-
 interface Client {
   ws: WebSocket
   userId: string

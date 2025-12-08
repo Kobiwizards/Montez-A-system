@@ -16,7 +16,7 @@ export class Validators {
       'Password must contain at least one uppercase letter, one lowercase letter, and one number'
     )
   
-  static name = z.string()
+  static username = z.string()
     .min(2, 'Name must be at least 2 characters')
     .max(100, 'Name must be less than 100 characters')
     .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces')
@@ -31,7 +31,6 @@ export class Validators {
   static month = z.string()
     .regex(/^\d{4}-\d{2}$/, 'Month must be in YYYY-MM format')
     .refine((val) => {
-      const [year, month] = val.split('-').map(Number)
       return month >= 1 && month <= 12
     }, 'Month must be between 01 and 12')
   

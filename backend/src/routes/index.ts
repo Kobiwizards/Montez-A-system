@@ -9,8 +9,8 @@ import maintenanceRoutes from './maintenance.routes'
 
 const router = Router()
 
-// API documentation
-router.get('/', (req, res) => {
+// API Documentation
+router.get('/', (_req, res) => {
   res.json({
     message: 'Montez A Property Management API',
     version: '1.0.0',
@@ -23,11 +23,11 @@ router.get('/', (req, res) => {
       water: '/api/water',
       maintenance: '/api/maintenance',
     },
-    documentation: 'Add Swagger/OpenAPI documentation here',
+    documentation: 'Coming soon...',
   })
 })
 
-// Mount route modules
+// Mount routes
 router.use('/auth', authRoutes)
 router.use('/tenants', tenantRoutes)
 router.use('/payments', paymentRoutes)

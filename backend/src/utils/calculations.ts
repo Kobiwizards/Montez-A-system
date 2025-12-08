@@ -1,4 +1,4 @@
-import { config } from '../config'
+import { config } from '../config/index'
 
 // Montez A specific calculations
 export const MONTEZ_A_UNITS = 26

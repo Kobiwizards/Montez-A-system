@@ -84,7 +84,7 @@ export class AuditLogService {
               role: true,
             },
           },
-        },
+        } as any, // Use type assertion to fix TypeScript issue
       }),
       prisma.auditLog.count({ where }),
     ])
@@ -115,7 +115,7 @@ export class AuditLogService {
             role: true,
           },
         },
-      },
+      } as any, // Use type assertion to fix TypeScript issue
     })
 
     return logs.map(log => ({

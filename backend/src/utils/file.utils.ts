@@ -2,7 +2,6 @@ import fs from 'fs/promises'
 import path from 'path'
 import { Readable } from 'stream'
 import crypto from 'crypto'
-import { config } from '../config'
 
 export class FileUtils {
   static async ensureDirectory(dirPath: string): Promise<void> {
@@ -22,7 +21,7 @@ export class FileUtils {
     }
   }
 
-  static async getFileStats(filePath: string): Promise<fs.Stats | null> {
+  static async getFileStats(filePath: string): Promise<any | null> {
     try {
       return await fs.stat(filePath)
     } catch {
@@ -135,21 +134,17 @@ export class FileUtils {
   static async compressImage(
     sourcePath: string,
     destinationPath: string,
-    quality: number = 80
-  ): Promise<void> {
-    // This is a placeholder for image compression
-    // In production, you would use sharp or jimp
-    await this.copyFile(sourcePath, destinationPath)
-  }
-
-  static async validateImageDimensions(
-    filePath: string,
-    minWidth: number = 100,
-    minHeight: number = 100
   ): Promise<boolean> {
-    // This is a placeholder for image dimension validation
-    // In production, you would use sharp or jimp to get dimensions
-    return true
+    // This is a placeholder for image compression
+    // In production, you would use sharp or jimp to compress images
+    try {
+      // For now, just copy the file
+      await this.copyFile(sourcePath, destinationPath)
+      return true
+    } catch (error) {
+      console.error('Image compression error:', error)
+      return false
+    }
   }
 
   static async isImage(filePath: string): Promise<boolean> {

@@ -72,7 +72,7 @@ export const createApp = () => {
   app.use('/receipts', express.static(path.join(__dirname, '../../receipts')))
 
   // Health check
-  app.get('/health', (req, res) => {
+  app.get('/health', (_, res) => {
     res.status(200).json({
       status: 'healthy',
       timestamp: new Date().toISOString(),

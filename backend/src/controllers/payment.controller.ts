@@ -5,7 +5,7 @@ import { AuditLogService } from '../services/audit.service'
 import { ReceiptService } from '../services/receipt.service'
 import { EmailService } from '../services/email.service'
 import { FileService } from '../services/file.service'
-import { config } from '../config'
+import { config } from '../config/index'
 import path from 'path'
 import fs from 'fs/promises'
 
