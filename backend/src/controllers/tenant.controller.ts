@@ -243,7 +243,7 @@ export class TenantController {
       })
 
       // Send welcome email with credentials
-      if (config.emailHost) {
+      if (config.email.user) {
         await this.emailService.sendWelcomeEmail(tenant, tempPassword)
       }
 
@@ -254,7 +254,7 @@ export class TenantController {
         success: true,
         message: 'Tenant created successfully',
         data: tenantWithoutPassword,
-        tempPassword: config.emailHost ? undefined : tempPassword, // Only return if email not configured
+        tempPassword: config.email.user ? undefined : tempPassword, // Only return if email not configured
       })
     } catch (error) {
       console.error('Create tenant error:', error)

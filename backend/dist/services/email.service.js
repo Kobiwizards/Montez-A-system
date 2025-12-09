@@ -5,327 +5,350 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
-const index_1 = require("../config/index");
+const config_1 = require("../config");
 class EmailService {
     constructor() {
         this.transporter = null;
-        if (index_1.config.emailHost) {
+        this.initializeTransporter();
+    }
+    initializeTransporter() {
+        if (config_1.config.email.user && config_1.config.email.password) {
             this.transporter = nodemailer_1.default.createTransport({
-                host: index_1.config.emailHost,
-                port: index_1.config.emailPort,
-                secure: index_1.config.emailPort === 465,
+                host: config_1.config.email.host,
+                port: config_1.config.email.port,
+                secure: config_1.config.email.secure,
                 auth: {
-                    user: index_1.config.emailUser,
-                    pass: index_1.config.emailPassword,
+                    user: config_1.config.email.user,
+                    pass: config_1.config.email.password,
                 },
             });
+            console.log('✅ Email transporter initialized');
+        }
+        else {
+            console.warn('⚠️  Email credentials not configured. Emails will be logged to console.');
         }
     }
     async sendEmail(to, subject, html) {
-        if (!this.transporter) {
-            console.log('Email service not configured. Would send email:', {
-                to,
-                subject,
-                html,
-            });
-            return;
-        }
         try {
-            await this.transporter.sendMail({
-                from: index_1.config.emailFrom,
+            const mailOptions = {
+                from: config_1.config.email.from,
                 to,
                 subject,
                 html,
-            });
+            };
+            if (this.transporter) {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`✅ Email sent to ${to}`);
+            }
+            else {
+                // Log to console in development
+                console.log('��� Email would be sent (development mode):');
+                console.log('To:', to);
+                console.log('Subject:', subject);
+                console.log('HTML:', html);
+            }
+            return true;
         }
         catch (error) {
-            console.error('Failed to send email:', error);
-            throw error;
+            console.error('❌ Failed to send email:', error);
+            return false;
         }
     }
     async sendWelcomeEmail(tenant, tempPassword) {
-        const subject = `Welcome to ${index_1.config.appName}`;
+        const subject = `Welcome to ${config_1.config.appName}`;
         const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1E40AF;">Welcome to ${index_1.config.appName}!</h2>
-        
-        <p>Dear ${tenant.name},</p>
-        
-        <p>Your account has been created successfully. Here are your login details:</p>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Email:</strong> ${tenant.email}</p>
-          <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-          <p><strong>Apartment:</strong> ${tenant.apartment}</p>
-          <p><strong>Monthly Rent:</strong> KSh ${tenant.rentAmount.toLocaleString()}</p>
-        </div>
-        
-        <p>Please login at <a href="${index_1.config.appUrl}/login">${index_1.config.appUrl}/login</a> and change your password immediately.</p>
-        
-        <p>You can use the system to:</p>
-        <ul>
-          <li>View your balance and payment history</li>
-          <li>Upload payment proofs (M-Pesa screenshots or cash receipts)</li>
-          <li>Download payment receipts</li>
-          <li>Calculate water bills</li>
-          <li>Submit maintenance requests</li>
-        </ul>
-        
-        <p>If you have any questions, please contact the management.</p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-        <p>Kizito Road, Nairobi</p>
-        <p>Email: ${index_1.config.emailFrom}</p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; background: #1E40AF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+            .credentials { background: #e8f4fd; border-left: 4px solid #1E40AF; padding: 15px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Welcome to ${config_1.config.appName}!</h1>
+            </div>
+            <div class="content">
+              <p>Hello <strong>${tenant.name}</strong>,</p>
+              <p>Your account has been created successfully for apartment <strong>${tenant.apartment}</strong>.</p>
+              
+              <div class="credentials">
+                <h3 style="margin-top: 0;">Your Login Credentials:</h3>
+                <p><strong>Email:</strong> ${tenant.email}</p>
+                <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+              </div>
+              
+              <p><strong>Important:</strong> Please login and change your password immediately.</p>
+              <p>Please login at <a href="${config_1.config.appUrl}/login">${config_1.config.appUrl}/login</a></p>
+              
+              <p style="margin-top: 30px;">
+                <a href="${config_1.config.appUrl}/login" class="button">Login Now</a>
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              
+              <p><strong>${config_1.config.appName} Management</strong></p>
+              <p>Email: ${config_1.config.email.from}</p>
+              <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `;
-        await this.sendEmail(tenant.email, subject, html);
+        return this.sendEmail(tenant.email, subject, html);
     }
     async sendPaymentNotification(payment, tenant) {
-        const subject = `New Payment Submitted - ${payment.type} for ${payment.month}`;
+        const subject = `New Payment Received - ${config_1.config.appName}`;
+        const adminEmail = config_1.config.email.from;
         const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1E40AF;">New Payment Submitted</h2>
-        
-        <p>A new payment has been submitted and is awaiting verification:</p>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Tenant:</strong> ${tenant.name} (${tenant.apartment})</p>
-          <p><strong>Payment Type:</strong> ${payment.type}</p>
-          <p><strong>Amount:</strong> KSh ${payment.amount.toLocaleString()}</p>
-          <p><strong>Month:</strong> ${payment.month}</p>
-          <p><strong>Method:</strong> ${payment.method}</p>
-          <p><strong>Submitted:</strong> ${new Date(payment.createdAt).toLocaleString()}</p>
-        </div>
-        
-        <p>Please login to the admin portal to verify this payment.</p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} System</strong></p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10B981 0%, #34D399 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .payment-info { background: #f0fdf4; border: 1px solid #BBF7D0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">New Payment Received</h1>
+            </div>
+            <div class="content">
+              <p>Hello Admin,</p>
+              <p>A new payment has been submitted and is pending verification.</p>
+              
+              <div class="payment-info">
+                <h3 style="margin-top: 0;">Payment Details:</h3>
+                <p><strong>Tenant:</strong> ${tenant.name}</p>
+                <p><strong>Apartment:</strong> ${tenant.apartment}</p>
+                <p><strong>Amount:</strong> KSh ${payment.amount.toLocaleString()}</p>
+                <p><strong>Type:</strong> ${payment.type}</p>
+                <p><strong>Method:</strong> ${payment.method}</p>
+                <p><strong>Month:</strong> ${payment.month}</p>
+                <p><strong>Submitted:</strong> ${new Date(payment.createdAt).toLocaleString()}</p>
+              </div>
+              
+              <p>Please login to the admin panel to verify this payment.</p>
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              
+              <p><strong>${config_1.config.appName} System</strong></p>
+            </div>
+          </div>
+        </body>
+      </html>
     `;
-        // Send to admin (in a real system, you would get admin emails from database)
-        const adminEmail = index_1.config.emailFrom;
-        await this.sendEmail(adminEmail, subject, html);
-    }
-    async sendPaymentStatusNotification(tenant, payment) {
-        const subject = `Payment ${payment.status.toLowerCase()} - ${payment.type} for ${payment.month}`;
-        let statusMessage = '';
-        if (payment.status === 'VERIFIED') {
-            statusMessage = `
-        <p>Your payment has been verified and processed successfully.</p>
-        <p>You can download your receipt from your tenant portal.</p>
-      `;
-        }
-        else if (payment.status === 'REJECTED') {
-            statusMessage = `
-        <p>Your payment has been rejected.</p>
-        ${payment.adminNotes ? `<p><strong>Reason:</strong> ${payment.adminNotes}</p>` : ''}
-        <p>Please submit a new payment with correct information.</p>
-      `;
-        }
-        const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: ${payment.status === 'VERIFIED' ? '#10B981' : '#EF4444'};">
-          Payment ${payment.status}
-        </h2>
-        
-        <p>Dear ${tenant.name},</p>
-        
-        <p>Your payment details:</p>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Payment Type:</strong> ${payment.type}</p>
-          <p><strong>Amount:</strong> KSh ${payment.amount.toLocaleString()}</p>
-          <p><strong>Month:</strong> ${payment.month}</p>
-          <p><strong>Method:</strong> ${payment.method}</p>
-          <p><strong>Status:</strong> ${payment.status}</p>
-          <p><strong>Date Processed:</strong> ${new Date(payment.verifiedAt || payment.createdAt).toLocaleString()}</p>
-        </div>
-        
-        ${statusMessage}
-        
-        <p>Login to your tenant portal at <a href="${index_1.config.appUrl}/tenant/dashboard">${index_1.config.appUrl}/tenant/dashboard</a></p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-      </div>
-    `;
-        await this.sendEmail(tenant.email, subject, html);
+        return this.sendEmail(adminEmail, subject, html);
     }
     async sendReceiptEmail(tenant, receipt) {
-        const subject = `Payment Receipt - ${receipt.receiptNumber}`;
+        const subject = `Payment Receipt - ${config_1.config.appName}`;
         const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1E40AF;">Payment Receipt</h2>
-        
-        <p>Dear ${tenant.name},</p>
-        
-        <p>Your payment receipt has been generated. Details:</p>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Receipt Number:</strong> ${receipt.receiptNumber}</p>
-          <p><strong>Generated Date:</strong> ${new Date(receipt.generatedAt).toLocaleString()}</p>
-        </div>
-        
-        <p>You can download your receipt from your tenant portal or by clicking the link below:</p>
-        
-        <p style="text-align: center; margin: 30px 0;">
-          <a href="${index_1.config.appUrl}/api/receipts/${receipt.id}/download" 
-             style="background: #1E40AF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Download Receipt
-          </a>
-        </p>
-        
-        <p>Please keep this receipt for your records.</p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .receipt-info { background: #f5f3ff; border: 1px solid #DDD6FE; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .button { display: inline-block; background: #8B5CF6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Payment Receipt</h1>
+            </div>
+            <div class="content">
+              <p>Hello <strong>${tenant.name}</strong>,</p>
+              <p>Your payment has been verified and a receipt has been generated.</p>
+              
+              <div class="receipt-info">
+                <h3 style="margin-top: 0;">Receipt Details:</h3>
+                <p><strong>Receipt Number:</strong> ${receipt.receiptNumber}</p>
+                <p><strong>Generated:</strong> ${new Date(receipt.generatedAt).toLocaleString()}</p>
+              </div>
+              
+              <p>You can download your receipt using the button below:</p>
+              
+              <p style="margin-top: 30px;">
+                <a href="${config_1.config.appUrl}/api/receipts/${receipt.id}/download" class="button">Download Receipt</a>
+              </p>
+              
+              <p>Or view it in your tenant portal.</p>
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              
+              <p><strong>${config_1.config.appName} Management</strong></p>
+              <p>Email: ${config_1.config.email.from}</p>
+              <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `;
-        await this.sendEmail(tenant.email, subject, html);
+        return this.sendEmail(tenant.email, subject, html);
     }
-    async sendPaymentReminder(tenant, month) {
-        const subject = `Payment Reminder - ${month} Rent Due`;
+    async sendPaymentStatusNotification(tenant, payment) {
+        const subject = `Payment ${payment.status === 'VERIFIED' ? 'Verified' : 'Rejected'} - ${config_1.config.appName}`;
+        const statusColor = payment.status === 'VERIFIED' ? '#10B981' : '#EF4444';
+        const statusText = payment.status === 'VERIFIED' ? 'verified successfully' : 'rejected';
         const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #F59E0B;">Payment Reminder</h2>
-        
-        <p>Dear ${tenant.name},</p>
-        
-        <p>This is a friendly reminder that your rent payment for <strong>${month}</strong> is due.</p>
-        
-        <div style="background: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Apartment:</strong> ${tenant.apartment}</p>
-          <p><strong>Amount Due:</strong> KSh ${tenant.rentAmount.toLocaleString()}</p>
-          <p><strong>Current Balance:</strong> KSh ${tenant.balance.toLocaleString()}</p>
-          <p><strong>Due Date:</strong> 5th of each month</p>
-        </div>
-        
-        <p>Please make your payment through one of the following methods:</p>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h4 style="margin-top: 0;">Payment Methods:</h4>
-          
-          <p><strong>M-Pesa:</strong></p>
-          <ol>
-            <li>Go to M-Pesa Menu</li>
-            <li>Select "Lipa Na M-Pesa"</li>
-            <li>Enter Business Number: <strong>555555</strong></li>
-            <li>Enter Account Number: <strong>${tenant.apartment}</strong></li>
-            <li>Enter Amount: <strong>${tenant.rentAmount}</strong></li>
-            <li>Enter your PIN</li>
-            <li>Upload screenshot in tenant portal</li>
-          </ol>
-          
-          <p><strong>Cash:</strong></p>
-          <p>Pay to the caretaker and get a signed receipt. Upload the receipt in your tenant portal.</p>
-        </div>
-        
-        <p>Login to submit your payment: <a href="${index_1.config.appUrl}/tenant/payments/new">${index_1.config.appUrl}/tenant/payments/new</a></p>
-        
-        <p>Please ignore this message if you have already made the payment.</p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, ${statusColor} 0%, ${statusColor}99 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .payment-info { background: ${payment.status === 'VERIFIED' ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${payment.status === 'VERIFIED' ? '#BBF7D0' : '#FECACA'}; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Payment ${payment.status === 'VERIFIED' ? 'Verified' : 'Rejected'}</h1>
+            </div>
+            <div class="content">
+              <p>Hello <strong>${tenant.name}</strong>,</p>
+              <p>Your payment has been <strong>${statusText}</strong>.</p>
+              
+              <div class="payment-info">
+                <h3 style="margin-top: 0;">Payment Details:</h3>
+                <p><strong>Amount:</strong> KSh ${payment.amount.toLocaleString()}</p>
+                <p><strong>Type:</strong> ${payment.type}</p>
+                <p><strong>Month:</strong> ${payment.month}</p>
+                <p><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: bold;">${payment.status}</span></p>
+                ${payment.adminNotes ? `<p><strong>Admin Notes:</strong> ${payment.adminNotes}</p>` : ''}
+              </div>
+              
+              ${payment.status === 'VERIFIED' ? `
+                <p>Your payment receipt is available for download in your tenant portal.</p>
+              ` : `
+                <p>If you have any questions about why your payment was rejected, please contact management.</p>
+                <p>Login to submit your payment: <a href="${config_1.config.appUrl}/tenant/payments/new">${config_1.config.appUrl}/tenant/payments/new</a></p>
+              `}
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              
+              <p><strong>${config_1.config.appName} Management</strong></p>
+              <p>Email: ${config_1.config.email.from}</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `;
-        await this.sendEmail(tenant.email, subject, html);
+        return this.sendEmail(tenant.email, subject, html);
     }
-    async sendBalanceNotification(tenant, newBalance) {
-        const subject = `Account Balance Update - ${tenant.apartment}`;
+    async sendBalanceNotification(tenant, balance) {
+        const subject = `Balance Reminder - ${config_1.config.appName}`;
         const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: ${newBalance > 0 ? '#EF4444' : '#10B981'};">Account Balance Update</h2>
-        
-        <p>Dear ${tenant.name},</p>
-        
-        <p>Your account balance has been updated:</p>
-        
-        <div style="background: ${newBalance > 0 ? '#fee2e2' : '#d1fae5'}; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Apartment:</strong> ${tenant.apartment}</p>
-          <p><strong>New Balance:</strong> KSh ${newBalance.toLocaleString()}</p>
-          <p><strong>Status:</strong> ${newBalance > 0 ? 'OVERDUE' : 'CURRENT'}</p>
-          ${newBalance > 0 ? `<p style="color: #EF4444;"><strong>⚠️ Action Required:</strong> Please clear your outstanding balance.</p>` : ''}
-        </div>
-        
-        ${newBalance > 0 ? `
-          <p>Please make a payment to clear your outstanding balance as soon as possible.</p>
-          <p>Login to submit your payment: <a href="${index_1.config.appUrl}/tenant/payments/new">${index_1.config.appUrl}/tenant/payments/new</a></p>
-        ` : `
-          <p>Your account is now up to date. Thank you for your prompt payment!</p>
-        `}
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .balance-info { background: #fffbeb; border: 1px solid #FDE68A; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .button { display: inline-block; background: #F59E0B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Balance Reminder</h1>
+            </div>
+            <div class="content">
+              <p>Hello <strong>${tenant.name}</strong>,</p>
+              
+              <div class="balance-info">
+                <h3 style="margin-top: 0;">Current Balance:</h3>
+                <p style="font-size: 24px; font-weight: bold; color: ${balance > 0 ? '#DC2626' : '#10B981'}">
+                  KSh ${balance.toLocaleString()}
+                </p>
+                <p>Apartment: ${tenant.apartment}</p>
+              </div>
+              
+              ${balance > 0 ? `
+                <p>Please submit your payment to clear the outstanding balance.</p>
+                <p>Login to submit your payment: <a href="${config_1.config.appUrl}/tenant/payments/new">${config_1.config.appUrl}/tenant/payments/new</a></p>
+                
+                <p style="margin-top: 30px;">
+                  <a href="${config_1.config.appUrl}/tenant/payments/new" class="button">Make Payment</a>
+                </p>
+              ` : `
+                <p>Your account is in good standing. Thank you for staying current with your payments.</p>
+              `}
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              
+              <p><strong>${config_1.config.appName} Management</strong></p>
+              <p>Email: ${config_1.config.email.from}</p>
+              <p style="color: #666; font-size: 12px;">This is an automated message from ${config_1.config.appName} System. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `;
-        await this.sendEmail(tenant.email, subject, html);
+        return this.sendEmail(tenant.email, subject, html);
     }
-    async sendMaintenanceUpdate(tenant, request, updateType) {
-        const subjects = {
-            created: 'New Maintenance Request Submitted',
-            updated: 'Maintenance Request Updated',
-            resolved: 'Maintenance Request Resolved',
-        };
-        const colors = {
-            created: '#3B82F6',
-            updated: '#F59E0B',
-            resolved: '#10B981',
-        };
-        const subject = subjects[updateType];
+    async sendMaintenanceUpdate(tenant, maintenance, updateType) {
+        const subject = `Maintenance ${updateType ? updateType.charAt(0).toUpperCase() + updateType.slice(1) : 'Update'} - ${config_1.config.appName}`;
         const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: ${colors[updateType]};">${subject}</h2>
-        
-        <p>Dear ${tenant.name},</p>
-        
-        <p>Your maintenance request has been ${updateType}:</p>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Request ID:</strong> ${request.id}</p>
-          <p><strong>Title:</strong> ${request.title}</p>
-          <p><strong>Description:</strong> ${request.description}</p>
-          <p><strong>Priority:</strong> ${request.priority}</p>
-          <p><strong>Status:</strong> ${request.status}</p>
-          <p><strong>Apartment:</strong> ${request.apartment}</p>
-          ${request.resolvedAt ? `<p><strong>Resolved Date:</strong> ${new Date(request.resolvedAt).toLocaleString()}</p>` : ''}
-          ${request.resolutionNotes ? `<p><strong>Resolution Notes:</strong> ${request.resolutionNotes}</p>` : ''}
-          ${request.cost ? `<p><strong>Cost:</strong> KSh ${request.cost.toLocaleString()}</p>` : ''}
-        </div>
-        
-        <p>You can view the status of your maintenance requests in your tenant portal.</p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #6366F1 0%, #818CF8 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .maintenance-info { background: #eef2ff; border: 1px solid #C7D2FE; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Maintenance ${updateType ? updateType.charAt(0).toUpperCase() + updateType.slice(1) : 'Update'}</h1>
+            </div>
+            <div class="content">
+              <p>Hello <strong>${tenant.name}</strong>,</p>
+              
+              <div class="maintenance-info">
+                <h3 style="margin-top: 0;">Maintenance Request #${maintenance.id?.slice(-8) || 'N/A'}</h3>
+                <p><strong>Title:</strong> ${maintenance.title}</p>
+                <p><strong>Status:</strong> ${maintenance.status}</p>
+                <p><strong>Priority:</strong> ${maintenance.priority}</p>
+                <p><strong>Updated:</strong> ${new Date(maintenance.updatedAt || maintenance.createdAt).toLocaleString()}</p>
+                ${maintenance.resolutionNotes ? `<p><strong>Resolution Notes:</strong> ${maintenance.resolutionNotes}</p>` : ''}
+              </div>
+              
+              <p>You can view the full details in your tenant portal.</p>
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              
+              <p><strong>${config_1.config.appName} Management</strong></p>
+              <p>Email: ${config_1.config.email.from}</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `;
-        await this.sendEmail(tenant.email, subject, html);
-    }
-    async sendSystemNotification(to, subject, message) {
-        const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1E40AF;">${subject}</h2>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          ${message.split('\n').map(line => `<p>${line}</p>`).join('')}
-        </div>
-        
-        <p>This is an automated message from ${index_1.config.appName} System.</p>
-        
-        <br>
-        <p>Best regards,</p>
-        <p><strong>${index_1.config.appName} Management</strong></p>
-      </div>
-    `;
-        await this.sendEmail(to, subject, html);
+        return this.sendEmail(tenant.email, subject, html);
     }
 }
 exports.EmailService = EmailService;

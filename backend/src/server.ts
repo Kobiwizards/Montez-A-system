@@ -26,7 +26,7 @@ async function startServer() {
       console.log(`Ì∫Ä Server running on port ${PORT}`)
       console.log(`Ì≥ä API Documentation: http://localhost:${PORT}/api-docs`)
       console.log(`Ìºç Environment: ${config.nodeEnv}`)
-      console.log(`Ì¥ó CORS Origin: ${config.corsOrigin}`)
+      console.log(`Ì¥ó CORS Origin: ${config.corsOrigins[0]}`)
     })
 
     // Setup automated tasks

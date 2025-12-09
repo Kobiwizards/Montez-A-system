@@ -202,7 +202,7 @@ class TenantController {
                     userAgent: req.get('user-agent'),
                 });
                 // Send welcome email with credentials
-                if (index_1.config.emailHost) {
+                if (index_1.config.email.user) {
                     await this.emailService.sendWelcomeEmail(tenant, tempPassword);
                 }
                 // Remove password from response
@@ -211,7 +211,7 @@ class TenantController {
                     success: true,
                     message: 'Tenant created successfully',
                     data: tenantWithoutPassword,
-                    tempPassword: index_1.config.emailHost ? undefined : tempPassword, // Only return if email not configured
+                    tempPassword: index_1.config.email.user ? undefined : tempPassword, // Only return if email not configured
                 });
             }
             catch (error) {

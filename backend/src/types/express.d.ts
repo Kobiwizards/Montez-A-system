@@ -3,7 +3,7 @@ import { User } from '@prisma/client'
 
 declare global {
   namespace Express {
-    interface AuthRequest extends Request {
+    interface Request {
       user?: User
       files?: Express.Multer.File[]
     }

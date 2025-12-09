@@ -140,7 +140,7 @@ export const refreshToken = async (
       })
     }
 
-    const decoded = jwt.verify(refreshToken, config.refreshTokenSecret) as {
+    const decoded = jwt.verify(refreshToken, config.jwtSecret) as {
       id: string
       email: string
     }
@@ -170,7 +170,7 @@ export const refreshToken = async (
 
     const newRefreshToken = jwt.sign(
       { id: user.id, email: user.email },
-      config.refreshTokenSecret,
+      config.jwtSecret,
       { expiresIn: '7d' } // Fixed: Use string literal
     )
 

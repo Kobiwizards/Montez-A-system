@@ -299,7 +299,7 @@ export class MaintenanceController {
       await this.emailService.sendMaintenanceUpdate(
         existingRequest.tenant,
         request,
-        status === 'COMPLETED' ? 'resolved' : 'updated'
+        
       )
 
       return res.status(200).json({

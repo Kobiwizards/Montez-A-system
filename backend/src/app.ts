@@ -19,70 +19,68 @@ export const createApp = () => {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        imgSrc: ["'self'", "data:", "https:"]
+      }
+    }
   }))
-  
-  // Rate limiting
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
-  })
-  app.use('/api/', limiter)
 
-  // Body parsing middleware
+  // CORS
+  app.use(cors({
+    origin: config.corsOrigins,
+    credentials: true
+  }))
+
+  // Body parsing
   app.use(express.json({ limit: '10mb' }))
   app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-  // CORS configuration - Handle multiple origins
-  const allowedOrigins = config.corsOrigin.split(',').map(origin => origin.trim())
-  
-  app.use(cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true)
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        console.log('Blocked by CORS:', origin)
-        callback(new Error('Not allowed by CORS'))
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  }))
+  // Logging
+  if (process.env.NODE_ENV !== 'test') {
+    app.use(morgan('combined'))
+  }
 
   // Compression
   app.use(compression())
 
-  // Logging
-  if (config.nodeEnv === 'development') {
-    app.use(morgan('dev'))
-  } else {
-    app.use(morgan('combined'))
-  }
-
-  // Static files
-  app.use('/uploads', express.static(path.join(__dirname, '../../uploads')))
-  app.use('/receipts', express.static(path.join(__dirname, '../../receipts')))
-
-  // Health check
-  app.get('/health', (_, res) => {
-    res.status(200).json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.nodeEnv,
+  // Rate limiting
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // limit each IP to 100 requests per windowMs
+      message: 'Too many requests from this IP, please try again later.',
     })
-  })
+  )
+
+  // Serve static files
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+  app.use('/receipts', express.static(path.join(__dirname, '../receipts')))
 
   // API routes
   app.use('/api', routes)
+
+  // Health check
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() })
+  })
+
+  // API documentation route
+  app.get('/api-docs', (req, res) => {
+    res.json({
+      name: 'Montez A Property Management API',
+      version: '1.0.0',
+      endpoints: {
+        auth: '/api/auth',
+        tenants: '/api/tenants',
+        payments: '/api/payments',
+        receipts: '/api/receipts',
+        water: '/api/water',
+        maintenance: '/api/maintenance',
+        analytics: '/api/analytics'
+      },
+      documentation: 'See README.md for full API documentation'
+    })
+  })
 
   // Error handling
   app.use(notFoundHandler)

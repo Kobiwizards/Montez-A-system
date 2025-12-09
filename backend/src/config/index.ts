@@ -8,50 +8,62 @@ export const config = {
   // Server
   port: process.env.PORT || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
-  
-  // Database
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://montez_a_db_user:T87pOFxrcTBECwCfQtnopJCnBiXoywpw@dpg-d4r141qli9vc73a60960-a/montez_a_db?sslmode=require',
-  
-  // JWT
-  jwtSecret: process.env.JWT_SECRET || '5900f9f295d1542943203c2e227d4bd6',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || '4686b297b5ab30ea3bdb0f558953ac2f',
-  refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
-  
-  // CORS - Allow both local and production
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000,https://montez-a.onrender.com',
-  
-  // File upload
-  maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880'), // 5MB
-  uploadPath: process.env.UPLOAD_PATH || 'uploads',
-  receiptsPath: process.env.RECEIPTS_PATH || 'receipts',
-  
-  // Email (optional)
-  emailHost: process.env.EMAIL_HOST,
-  emailPort: parseInt(process.env.EMAIL_PORT || '587'),
-  emailUser: process.env.EMAIL_USER,
-  emailPassword: process.env.EMAIL_PASSWORD,
-  emailFrom: process.env.EMAIL_FROM || 'noreply@monteza.com',
-  
-  // Application
   appName: process.env.APP_NAME || 'Montez A Property Management',
   appUrl: process.env.APP_URL || 'http://localhost:3000',
   
-  // Water rate
-  waterRatePerUnit: parseFloat(process.env.WATER_RATE_PER_UNIT || '150'),
+  // Database
+  databaseUrl: process.env.DATABASE_URL || '',
   
-  // Rent rates
-  oneBedroomRent: parseFloat(process.env.ONE_BEDROOM_RENT || '15000'),
-  twoBedroomRent: parseFloat(process.env.TWO_BEDROOM_RENT || '18000'),
+  // JWT
+  jwtSecret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET || 'your-refresh-secret-key',
+  refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
+  
+  // Email
+  email: {
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT || '587'),
+    secure: process.env.EMAIL_SECURE === 'true',
+    user: process.env.EMAIL_USER || '',
+    password: process.env.EMAIL_PASSWORD || '',
+    from: process.env.EMAIL_FROM || 'noreply@monteza.com'
+  },
+  
+  // For backward compatibility (direct access)
+  emailHost: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  emailPort: parseInt(process.env.EMAIL_PORT || '587'),
+  emailUser: process.env.EMAIL_USER || '',
+  emailPassword: process.env.EMAIL_PASSWORD || '',
+  emailFrom: process.env.EMAIL_FROM || 'noreply@monteza.com',
+  
+  // File uploads
+  uploadPath: process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads'),
+  receiptsPath: process.env.RECEIPTS_PATH || path.join(__dirname, '../../receipts'),
+  maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880'), // 5MB
+  allowedFileTypes: ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'],
+  
+  // CORS
+  corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000', // For backward compatibility
+  
+  // Water rate
+  waterRatePerUnit: parseInt(process.env.WATER_RATE_PER_UNIT || '150'),
+  
+  // Rent amounts
+  oneBedroomRent: parseInt(process.env.ONE_BEDROOM_RENT || '15000'),
+  twoBedroomRent: parseInt(process.env.TWO_BEDROOM_RENT || '18000'),
+  
+  // Analytics
+  analyticsSnapshotHour: parseInt(process.env.ANALYTICS_SNAPSHOT_HOUR || '23'), // 11 PM
 }
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET']
-requiredEnvVars.forEach(envVar => {
+for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
-    console.warn(`⚠️  Warning: ${envVar} environment variable is not set`)
+    console.warn(`⚠️  Warning: ${envVar} is not set in environment variables`)
   }
-})
+}
 
-// Type-safe configuration export
-export type Config = typeof config
+export default config

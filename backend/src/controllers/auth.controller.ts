@@ -61,7 +61,7 @@ export class AuthController {
 
       const refreshToken = jwt.sign(
         { id: user.id, email: user.email },
-        config.refreshTokenSecret,
+        config.jwtSecret,
         { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
       )
 

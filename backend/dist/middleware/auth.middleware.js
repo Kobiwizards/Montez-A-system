@@ -96,7 +96,7 @@ const refreshToken = async (req, res) => {
                 message: 'Refresh token is required.'
             });
         }
-        const decoded = jsonwebtoken_1.default.verify(refreshToken, index_1.config.refreshTokenSecret);
+        const decoded = jsonwebtoken_1.default.verify(refreshToken, index_1.config.jwtSecret);
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.id },
             select: { id: true, email: true, role: true, apartment: true }
@@ -114,7 +114,7 @@ const refreshToken = async (req, res) => {
             apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
         }, index_1.config.jwtSecret, { expiresIn: '24h' } // Fixed: Use string literal
         );
-        const newRefreshToken = jsonwebtoken_1.default.sign({ id: user.id, email: user.email }, index_1.config.refreshTokenSecret, { expiresIn: '7d' } // Fixed: Use string literal
+        const newRefreshToken = jsonwebtoken_1.default.sign({ id: user.id, email: user.email }, index_1.config.jwtSecret, { expiresIn: '7d' } // Fixed: Use string literal
         );
         return res.status(200).json({
             success: true,

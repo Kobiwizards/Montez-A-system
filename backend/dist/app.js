@@ -23,63 +23,57 @@ const createApp = () => {
             directives: {
                 defaultSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
-                scriptSrc: ["'self'"],
-                imgSrc: ["'self'", "data:", "https:"],
-            },
-        },
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+                imgSrc: ["'self'", "data:", "https:"]
+            }
+        }
     }));
-    // Rate limiting
-    const limiter = (0, express_rate_limit_1.default)({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 100, // Limit each IP to 100 requests per windowMs
-        message: 'Too many requests from this IP, please try again later.'
-    });
-    app.use('/api/', limiter);
-    // Body parsing middleware
+    // CORS
+    app.use((0, cors_1.default)({
+        origin: config_1.config.corsOrigins,
+        credentials: true
+    }));
+    // Body parsing
     app.use(express_1.default.json({ limit: '10mb' }));
     app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
-    // CORS configuration - Handle multiple origins
-    const allowedOrigins = config_1.config.corsOrigin.split(',').map(origin => origin.trim());
-    app.use((0, cors_1.default)({
-        origin: function (origin, callback) {
-            // Allow requests with no origin (like mobile apps or curl requests)
-            if (!origin)
-                return callback(null, true);
-            if (allowedOrigins.includes(origin)) {
-                callback(null, true);
-            }
-            else {
-                console.log('Blocked by CORS:', origin);
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    }));
-    // Compression
-    app.use((0, compression_1.default)());
     // Logging
-    if (config_1.config.nodeEnv === 'development') {
-        app.use((0, morgan_1.default)('dev'));
-    }
-    else {
+    if (process.env.NODE_ENV !== 'test') {
         app.use((0, morgan_1.default)('combined'));
     }
-    // Static files
-    app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../../uploads')));
-    app.use('/receipts', express_1.default.static(path_1.default.join(__dirname, '../../receipts')));
-    // Health check
-    app.get('/health', (_, res) => {
-        res.status(200).json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            environment: config_1.config.nodeEnv,
-        });
-    });
+    // Compression
+    app.use((0, compression_1.default)());
+    // Rate limiting
+    app.use((0, express_rate_limit_1.default)({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 100, // limit each IP to 100 requests per windowMs
+        message: 'Too many requests from this IP, please try again later.',
+    }));
+    // Serve static files
+    app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
+    app.use('/receipts', express_1.default.static(path_1.default.join(__dirname, '../receipts')));
     // API routes
     app.use('/api', routes_1.default);
+    // Health check
+    app.get('/health', (req, res) => {
+        res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+    });
+    // API documentation route
+    app.get('/api-docs', (req, res) => {
+        res.json({
+            name: 'Montez A Property Management API',
+            version: '1.0.0',
+            endpoints: {
+                auth: '/api/auth',
+                tenants: '/api/tenants',
+                payments: '/api/payments',
+                receipts: '/api/receipts',
+                water: '/api/water',
+                maintenance: '/api/maintenance',
+                analytics: '/api/analytics'
+            },
+            documentation: 'See README.md for full API documentation'
+        });
+    });
     // Error handling
     app.use(not_found_middleware_1.notFoundHandler);
     app.use(error_middleware_1.errorHandler);

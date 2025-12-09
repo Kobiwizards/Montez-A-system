@@ -245,7 +245,7 @@ class MaintenanceController {
                     userAgent: req.get('user-agent'),
                 });
                 // Send notification to tenant
-                await this.emailService.sendMaintenanceUpdate(existingRequest.tenant, request, status === 'COMPLETED' ? 'resolved' : 'updated');
+                await this.emailService.sendMaintenanceUpdate(existingRequest.tenant, request);
                 return res.status(200).json({
                     success: true,
                     message: 'Maintenance request updated successfully',

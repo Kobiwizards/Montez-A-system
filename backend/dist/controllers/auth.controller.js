@@ -47,7 +47,7 @@ class AuthController {
                     apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
                 }, index_1.config.jwtSecret, { expiresIn: '24h' } // Fixed: Use string literal instead of config.jwtExpiresIn
                 );
-                const refreshToken = jsonwebtoken_1.default.sign({ id: user.id, email: user.email }, index_1.config.refreshTokenSecret, { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
+                const refreshToken = jsonwebtoken_1.default.sign({ id: user.id, email: user.email }, index_1.config.jwtSecret, { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
                 );
                 // Update last login time
                 await prisma_1.prisma.user.update({
