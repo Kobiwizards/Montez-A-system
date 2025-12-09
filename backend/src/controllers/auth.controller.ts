@@ -1,9 +1,9 @@
+import { AuthRequest } from '../types/express'
 import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
 import { config } from '../config/index'
-import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 
 export class AuthController {

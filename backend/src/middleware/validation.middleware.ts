@@ -1,3 +1,4 @@
+import { AuthRequest } from '../types/express'
 import { Request, Response, NextFunction } from 'express'
 import { z, ZodError, AnyZodObject, ZodSchema, ZodEffects } from 'zod'
 import { fromZodError } from 'zod-validation-error'

@@ -1,3 +1,4 @@
+import { AuthRequest } from '../types/express'
 import { Request, Response } from 'express'
 
 export const notFoundHandler = (_req: Request, res: Response) => {

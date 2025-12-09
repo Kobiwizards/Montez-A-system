@@ -140,8 +140,9 @@ class PaymentController {
                         filesArray = req.files;
                     }
                     else if (typeof req.files === "object") {
-                        // Convert object of arrays to single array
-                        filesArray = Object.values(req.files).flat();
+                        // Convert object of arrays to single array with proper typing
+                        const filesObj = req.files;
+                        filesArray = Object.values(filesObj).flat();
                     }
                     for (const file of filesArray) {
                         const filePath = await this.fileService.saveFile(file, tenant.id, "payments");

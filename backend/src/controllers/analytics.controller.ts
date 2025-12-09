@@ -1,3 +1,4 @@
+import { AuthRequest } from '../types/express'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AnalyticsService } from '../services/analytics.service'

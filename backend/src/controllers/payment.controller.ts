@@ -1,6 +1,6 @@
+import { AuthRequest } from '../types/express'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
-import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 import { ReceiptService } from '../services/receipt.service'
 import { EmailService } from '../services/email.service'
@@ -181,8 +181,9 @@ export class PaymentController {
         if (Array.isArray(req.files)) {
           filesArray = req.files
         } else if (typeof req.files === "object") {
-          // Convert object of arrays to single array
-          filesArray = Object.values(req.files).flat()
+          // Convert object of arrays to single array with proper typing
+          const filesObj = req.files as { [fieldname: string]: Express.Multer.File[] }
+          filesArray = Object.values(filesObj).flat()
         }
         
         for (const file of filesArray) {

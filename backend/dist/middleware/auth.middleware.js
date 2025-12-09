@@ -5,146 +5,124 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.refreshToken = exports.authorize = exports.authenticate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const index_1 = require("../config/index");
+const config_1 = require("../config");
 const prisma_1 = require("../lib/prisma");
 const authenticate = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            res.status(401).json({
                 success: false,
-                message: 'Access denied. No token provided.'
+                message: 'No token provided',
             });
+            return;
         }
-        const token = authHeader.split(' ')[1];
-        try {
-            const decoded = jsonwebtoken_1.default.verify(token, index_1.config.jwtSecret);
-            // Verify user still exists and is active
-            const user = await prisma_1.prisma.user.findUnique({
-                where: { id: decoded.id },
-                select: { id: true, email: true, role: true, apartment: true, status: true }
+        const decoded = jsonwebtoken_1.default.verify(token, config_1.config.jwtSecret);
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                apartment: true,
+                unitType: true,
+                rentAmount: true,
+                balance: true,
+                status: true,
+            },
+        });
+        if (!user) {
+            res.status(401).json({
+                success: false,
+                message: 'User not found',
             });
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'User not found.'
-                });
-            }
-            if (user.role === 'TENANT' && user.status !== 'CURRENT') {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Account is not active.'
-                });
-            }
-            req.user = {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-                apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
-            };
-            next();
+            return;
         }
-        catch (error) {
-            if (error instanceof jsonwebtoken_1.default.TokenExpiredError) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Token has expired.'
-                });
-            }
-            if (error instanceof jsonwebtoken_1.default.JsonWebTokenError) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid token.'
-                });
-            }
-            throw error;
-        }
+        // Add user to request
+        ;
+        req.user = user;
+        next();
     }
     catch (error) {
         console.error('Authentication error:', error);
-        return res.status(500).json({
+        res.status(401).json({
             success: false,
-            message: 'Internal server error during authentication.'
+            message: 'Invalid token',
         });
     }
 };
 exports.authenticate = authenticate;
-const authorize = (...roles) => {
+const authorize = (roles) => {
     return (req, res, next) => {
-        if (!req.user) {
-            return res.status(401).json({
+        const user = req.user;
+        if (!user) {
+            res.status(401).json({
                 success: false,
-                message: 'Authentication required.'
+                message: 'Not authenticated',
             });
+            return;
         }
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).json({
+        const allowedRoles = Array.isArray(roles) ? roles : [roles];
+        if (!allowedRoles.includes(user.role)) {
+            res.status(403).json({
                 success: false,
-                message: 'Insufficient permissions.'
+                message: 'Insufficient permissions',
             });
+            return;
         }
         next();
     };
 };
 exports.authorize = authorize;
-const refreshToken = async (req, res) => {
+// Refresh token middleware
+const refreshToken = async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
         if (!refreshToken) {
-            return res.status(400).json({
+            res.status(401).json({
                 success: false,
-                message: 'Refresh token is required.'
+                message: 'No refresh token provided',
             });
+            return;
         }
-        const decoded = jsonwebtoken_1.default.verify(refreshToken, index_1.config.jwtSecret);
+        const decoded = jsonwebtoken_1.default.verify(refreshToken, config_1.config.jwtSecret);
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.id },
-            select: { id: true, email: true, role: true, apartment: true }
         });
         if (!user) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
-                message: 'Invalid refresh token.'
+                message: 'Invalid refresh token',
             });
+            return;
         }
-        const newAccessToken = jsonwebtoken_1.default.sign({
+        // Generate new tokens - FIXED: Use string literals for expiresIn
+        const newToken = jsonwebtoken_1.default.sign({
             id: user.id,
             email: user.email,
             role: user.role,
-            apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
-        }, index_1.config.jwtSecret, { expiresIn: '24h' } // Fixed: Use string literal
+            apartment: user.apartment,
+        }, config_1.config.jwtSecret, { expiresIn: '7d' } // Fixed: Use string literal directly
         );
-        const newRefreshToken = jsonwebtoken_1.default.sign({ id: user.id, email: user.email }, index_1.config.jwtSecret, { expiresIn: '7d' } // Fixed: Use string literal
+        const newRefreshToken = jsonwebtoken_1.default.sign({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        }, config_1.config.jwtSecret, { expiresIn: '30d' } // Fixed: Use string literal directly
         );
-        return res.status(200).json({
-            success: true,
-            accessToken: newAccessToken,
+        req.user = user;
+        req.tokens = {
+            token: newToken,
             refreshToken: newRefreshToken,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-                apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
-            }
-        });
+        };
+        next();
     }
     catch (error) {
-        if (error instanceof jsonwebtoken_1.default.TokenExpiredError) {
-            return res.status(401).json({
-                success: false,
-                message: 'Refresh token has expired.'
-            });
-        }
-        if (error instanceof jsonwebtoken_1.default.JsonWebTokenError) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid refresh token.'
-            });
-        }
-        console.error('Token refresh error:', error);
-        return res.status(500).json({
+        console.error('Refresh token error:', error);
+        res.status(401).json({
             success: false,
-            message: 'Internal server error.'
+            message: 'Invalid refresh token',
         });
     }
 };

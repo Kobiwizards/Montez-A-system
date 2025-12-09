@@ -5,9 +5,14 @@ declare global {
   namespace Express {
     interface Request {
       user?: User
-      files?: Express.Multer.File[]
+      files?: any
     }
   }
+}
+
+export interface AuthRequest extends Request {
+  user?: User
+  files?: any
 }
 
 export {}

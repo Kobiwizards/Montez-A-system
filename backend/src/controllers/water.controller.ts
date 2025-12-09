@@ -1,6 +1,6 @@
+import { AuthRequest } from '../types/express'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
-import { AuthRequest } from '../middleware/auth.middleware'
 import { AuditLogService } from '../services/audit.service'
 import { config } from '../config/index'
 

@@ -1,210 +1,162 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { config } from '../config/index'
+import { config } from '../config'
 import { prisma } from '../lib/prisma'
 
-// Extend the Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string
-        email: string
-        role: string
-        apartment?: string
-      }
-    }
-  }
-}
-
-// Keep AuthRequest for backward compatibility
-export interface AuthRequest extends Request {
-  user?: {
-    id: string
-    email: string
-    role: string
-    apartment?: string
-  }
-}
-
 export const authenticate = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
+) => {
   try {
-    const authHeader = req.headers.authorization
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Access denied. No token provided.' 
+    const token = req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        message: 'No token provided',
       })
+      return
     }
 
-    const token = authHeader.split(' ')[1]
-    
-    try {
-      const decoded = jwt.verify(token, config.jwtSecret) as {
-        id: string
-        email: string
-        role: string
-        apartment?: string
-      }
-
-      // Verify user still exists and is active
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: { id: true, email: true, role: true, apartment: true, status: true }
-      })
-
-      if (!user) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'User not found.' 
-        })
-      }
-
-      if (user.role === 'TENANT' && user.status !== 'CURRENT') {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Account is not active.' 
-        })
-      }
-
-      req.user = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
-      }
-
-      next()
-    } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Token has expired.' 
-        })
-      }
-      
-      if (error instanceof jwt.JsonWebTokenError) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Invalid token.' 
-        })
-      }
-      
-      throw error
+    const decoded = jwt.verify(token, config.jwtSecret) as {
+      id: string
+      email: string
+      role: string
+      apartment?: string
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        apartment: true,
+        unitType: true,
+        rentAmount: true,
+        balance: true,
+        status: true,
+      },
+    })
+
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'User not found',
+      })
+      return
+    }
+
+    // Add user to request
+    ;(req as any).user = user
+
+    next()
   } catch (error) {
     console.error('Authentication error:', error)
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error during authentication.' 
+    res.status(401).json({
+      success: false,
+      message: 'Invalid token',
     })
   }
 }
 
-export const authorize = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): Response | void => {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required.' 
+export const authorize = (roles: string | string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).user
+
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'Not authenticated',
       })
+      return
     }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Insufficient permissions.' 
+    const allowedRoles = Array.isArray(roles) ? roles : [roles]
+
+    if (!allowedRoles.includes(user.role)) {
+      res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions',
       })
+      return
     }
 
     next()
   }
 }
 
+// Refresh token middleware
 export const refreshToken = async (
   req: Request,
-  res: Response
-): Promise<Response> => {
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { refreshToken } = req.body
 
     if (!refreshToken) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Refresh token is required.' 
+      res.status(401).json({
+        success: false,
+        message: 'No refresh token provided',
       })
+      return
     }
 
     const decoded = jwt.verify(refreshToken, config.jwtSecret) as {
       id: string
       email: string
+      role: string
     }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, email: true, role: true, apartment: true }
     })
 
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid refresh token.' 
+      res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token',
       })
+      return
     }
 
-    const newAccessToken = jwt.sign(
+    // Generate new tokens - FIXED: Use string literals for expiresIn
+    const newToken = jwt.sign(
       {
         id: user.id,
         email: user.email,
         role: user.role,
-        apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
+        apartment: user.apartment,
       },
       config.jwtSecret,
-      { expiresIn: '24h' } // Fixed: Use string literal
+      { expiresIn: '7d' }  // Fixed: Use string literal directly
     )
 
     const newRefreshToken = jwt.sign(
-      { id: user.id, email: user.email },
-      config.jwtSecret,
-      { expiresIn: '7d' } // Fixed: Use string literal
-    )
-
-    return res.status(200).json({
-      success: true,
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-      user: {
+      {
         id: user.id,
         email: user.email,
         role: user.role,
-        apartment: user.apartment === 'ADMIN' ? undefined : user.apartment
-      }
-    })
+      },
+      config.jwtSecret,
+      { expiresIn: '30d' }  // Fixed: Use string literal directly
+    )
 
+    ;(req as any).user = user
+    ;(req as any).tokens = {
+      token: newToken,
+      refreshToken: newRefreshToken,
+    }
+
+    next()
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Refresh token has expired.' 
-      })
-    }
-    
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid refresh token.' 
-      })
-    }
-
-    console.error('Token refresh error:', error)
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error.' 
+    console.error('Refresh token error:', error)
+    res.status(401).json({
+      success: false,
+      message: 'Invalid refresh token',
     })
   }
 }
