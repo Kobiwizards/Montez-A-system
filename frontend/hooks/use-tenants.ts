@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useTenantStore } from '@/store/tenant.store'
 import { api } from '@/lib/api'
 import { Tenant, UpdateTenantData, TenantFilters } from '@/types/tenant.types'
@@ -7,234 +7,231 @@ export function useTenants() {
   const {
     tenants,
     selectedTenant,
-    isLoading,
     error,
     filters,
-    pagination,
+    stats,
+    isLoading,
     setTenants,
     setSelectedTenant,
     setLoading,
     setError,
+    clearError,
+    setStats,
     setFilters,
-    setPagination,
-    updateTenant: storeUpdateTenant,
-    deleteTenant: storeDeleteTenant,
-    clearFilters: storeClearFilters,
   } = useTenantStore()
 
-  // Fetch tenants with current filters
-  const fetchTenants = useCallback(async () => {
+  const fetchTenants = useCallback(async (newFilters?: TenantFilters) => {
     try {
       setLoading(true)
-      setError(null)
-      
+      clearError()
+
+      const filterParams = newFilters || filters
       const params = new URLSearchParams()
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
+
+      Object.entries(filterParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== '' && value !== null) {
           params.append(key, String(value))
         }
       })
 
       const response = await api.get(`/tenants?${params}`)
-      
+
       if (response.success && response.data) {
-        setTenants(response.data)
-        setPagination(response.pagination || { page: 1, limit: 20, total: 0, pages: 0 })
+        setTenants(response.data.tenants || response.data)
+        
+        // Update stats if provided
+        if (response.data.stats) {
+          setStats(response.data.stats)
+        }
+        
+        return { success: true, data: response.data }
       } else {
         setError(response.message || 'Failed to fetch tenants')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to fetch tenants')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [filters, setLoading, setError, setTenants, setPagination])
+  }, [filters, setLoading, setError, clearError, setTenants, setStats])
 
-  // Get tenant by ID
-  const getTenantById = useCallback(async (id: string) => {
+  const fetchTenant = useCallback(async (id: string) => {
     try {
       setLoading(true)
-      setError(null)
-      
+      clearError()
+
       const response = await api.get(`/tenants/${id}`)
-      
+
       if (response.success && response.data) {
         setSelectedTenant(response.data)
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch tenant' 
-        }
+        setError(response.message || 'Failed to fetch tenant')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch tenant' 
-      }
+      setError(error.message || 'Failed to fetch tenant')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [setLoading, setError, setSelectedTenant])
+  }, [setLoading, setError, clearError, setSelectedTenant])
 
-  // Get tenant by apartment number
-  const getTenantByApartment = useCallback(async (apartment: string) => {
+  const createTenant = useCallback(async (data: any) => {
     try {
       setLoading(true)
-      setError(null)
+      clearError()
+
+      const formData = new FormData()
       
-      const response = await api.get(`/tenants/apartment/${apartment}`)
-      
+      // Append tenant data
+      Object.entries(data).forEach(([key, value]) => {
+        if (value instanceof File) {
+          formData.append(key, value)
+        } else if (value !== undefined && value !== null) {
+          formData.append(key, value as string)
+        }
+      })
+
+      const response = await api.post('/tenants', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
       if (response.success && response.data) {
+        // Refresh tenants list
+        await fetchTenants()
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch tenant' 
-        }
+        setError(response.message || 'Failed to create tenant')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch tenant' 
-      }
+      setError(error.message || 'Failed to create tenant')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [setLoading, setError])
+  }, [setLoading, setError, clearError, fetchTenants])
 
-  // Update tenant
-  const updateTenant = async (id: string, data: UpdateTenantData) => {
+  const updateTenant = useCallback(async (id: string, data: UpdateTenantData) => {
     try {
       setLoading(true)
-      setError(null)
+      clearError()
+
+      const formData = new FormData()
       
-      const response = await api.put(`/tenants/${id}`, data)
-      
+      // Append tenant data
+      Object.entries(data).forEach(([key, value]) => {
+        if (value instanceof File) {
+          formData.append(key, value)
+        } else if (value !== undefined && value !== null) {
+          formData.append(key, value as string)
+        }
+      })
+
+      const response = await api.put(`/tenants/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
       if (response.success && response.data) {
-        storeUpdateTenant(id, data)
+        // Refresh tenant and list
+        await fetchTenant(id)
+        await fetchTenants()
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to update tenant' 
-        }
+        setError(response.message || 'Failed to update tenant')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to update tenant' 
-      }
+      setError(error.message || 'Failed to update tenant')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError, fetchTenant, fetchTenants])
 
-  // Delete tenant
-  const deleteTenant = async (id: string) => {
+  const deleteTenant = useCallback(async (id: string) => {
     try {
       setLoading(true)
-      setError(null)
-      
+      clearError()
+
       const response = await api.delete(`/tenants/${id}`)
-      
+
       if (response.success) {
-        storeDeleteTenant(id)
+        // Refresh tenants list
+        await fetchTenants()
         return { success: true }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to delete tenant' 
-        }
+        setError(response.message || 'Failed to delete tenant')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to delete tenant' 
-      }
+      setError(error.message || 'Failed to delete tenant')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError, fetchTenants])
 
-  // Update tenant balance
-  const updateBalance = async (id: string, amount: number, type: 'add' | 'subtract') => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const response = await api.put(`/tenants/${id}/balance`, { amount, type })
-      
-      if (response.success && response.data) {
-        storeUpdateTenant(id, { balance: response.data.balance })
-        return { success: true, data: response.data }
-      } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to update balance' 
-        }
-      }
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to update balance' 
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+      clearError()
 
-  // Get tenant statistics
-  const getTenantStats = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
       const response = await api.get('/tenants/stats')
-      
+
       if (response.success && response.data) {
+        setStats(response.data)
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch tenant stats' 
-        }
+        setError(response.message || 'Failed to fetch stats')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch tenant stats' 
-      }
+      setError(error.message || 'Failed to fetch stats')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [setLoading, setError])
+  }, [setLoading, setError, clearError, setStats])
 
-  // Clear filters
-  const clearFilters = () => {
-    storeClearFilters()
-  }
+  const sendNotification = useCallback(async (tenantId: string, title: string, message: string) => {
+    try {
+      setLoading(true)
+      clearError()
 
-  // Fetch tenants on filter change
-  useEffect(() => {
-    fetchTenants()
-  }, [filters.page, filters.limit, fetchTenants])
+      const response = await api.post(`/tenants/${tenantId}/notify`, { title, message })
+
+      if (response.success) {
+        return { success: true }
+      } else {
+        setError(response.message || 'Failed to send notification')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to send notification')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError])
 
   return {
     tenants,
     selectedTenant,
+    stats,
     isLoading,
     error,
     filters,
-    pagination,
     setFilters,
     fetchTenants,
-    getTenantById,
-    getTenantByApartment,
+    fetchTenant,
+    createTenant,
     updateTenant,
     deleteTenant,
-    updateBalance,
-    getTenantStats,
-    clearFilters,
+    fetchStats,
+    sendNotification,
   }
 }

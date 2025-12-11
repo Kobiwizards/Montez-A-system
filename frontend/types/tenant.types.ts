@@ -1,56 +1,78 @@
-export type TenantStatus = 'CURRENT' | 'OVERDUE' | 'DELINQUENT' | 'EVICTED' | 'FORMER'
+export type UserRole = 'ADMIN' | 'TENANT'
 export type UnitType = 'ONE_BEDROOM' | 'TWO_BEDROOM'
+export type TenantStatus = 'CURRENT' | 'OVERDUE' | 'DELINQUENT' | 'EVICTED' | 'FORMER'
 
 export interface Tenant {
   id: string
-  name: string
   email: string
   phone: string
+  name: string
+  role: UserRole
   apartment: string
   unitType: UnitType
   rentAmount: number
   waterRate: number
   balance: number
   status: TenantStatus
-  moveInDate: Date
-  leaseEndDate?: Date
+  moveInDate: string
+  leaseEndDate?: string
   emergencyContact?: string
   notes?: string
-  createdAt: Date
-  updatedAt: Date
+  idCopyUrl?: string
+  contractUrl?: string
+  createdAt: string
+  updatedAt: string
 }
 
-export interface TenantCreateDTO {
-  name: string
+export interface CreateTenantData {
   email: string
   phone: string
+  name: string
+  password: string
   apartment: string
   unitType: UnitType
   rentAmount: number
-  moveInDate: Date
+  waterRate?: number
+  moveInDate: string
+  leaseEndDate?: string
   emergencyContact?: string
   notes?: string
+  idCopy?: File
+  contract?: File
 }
 
-export interface TenantUpdateDTO {
-  name?: string
+export interface UpdateTenantData {
   email?: string
   phone?: string
+  name?: string
   apartment?: string
   unitType?: UnitType
   rentAmount?: number
+  waterRate?: number
+  balance?: number
   status?: TenantStatus
-  moveInDate?: Date
-  leaseEndDate?: Date
+  moveInDate?: string
+  leaseEndDate?: string
   emergencyContact?: string
   notes?: string
+  idCopy?: File
+  contract?: File
+}
+
+export interface TenantFilters {
+  status?: TenantStatus
+  apartment?: string
+  search?: string
+  page?: number
+  limit?: number
 }
 
 export interface TenantStats {
-  totalTenants: number
-  currentTenants: number
-  overdueTenants: number
-  delinquentTenants: number
-  averageBalance: number
+  total: number
+  current: number
+  overdue: number
+  delinquent: number
   totalOutstanding: number
+  averageRent: number
+  occupancyRate: number
 }

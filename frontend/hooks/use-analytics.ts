@@ -1,7 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAnalyticsStore } from '@/store/analytics.store'
 import { api } from '@/lib/api'
-import { AnalyticsData, AnalyticsFilters, ExportFormat } from '@/types/analytics.types'
+
+// Define types locally
+interface AnalyticsFilters {
+  startDate?: string
+  endDate?: string
+  unitType?: string
+  status?: string
+  apartment?: string
+}
+
+type ExportFormat = 'csv' | 'pdf' | 'excel'
 
 export function useAnalytics() {
   const {
@@ -37,9 +47,11 @@ export function useAnalytics() {
         }
       }
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch dashboard data'
+      setError(errorMessage)
       return { 
         success: false, 
-        error: error.message || 'Failed to fetch dashboard data' 
+        error: errorMessage 
       }
     } finally {
       setLoading(false)
@@ -73,9 +85,11 @@ export function useAnalytics() {
         }
       }
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch occupancy data'
+      setError(errorMessage)
       return { 
         success: false, 
-        error: error.message || 'Failed to fetch occupancy data' 
+        error: errorMessage 
       }
     } finally {
       setLoading(false)
@@ -109,9 +123,11 @@ export function useAnalytics() {
         }
       }
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch financial data'
+      setError(errorMessage)
       return { 
         success: false, 
-        error: error.message || 'Failed to fetch financial data' 
+        error: errorMessage 
       }
     } finally {
       setLoading(false)
@@ -135,9 +151,11 @@ export function useAnalytics() {
         }
       }
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to generate report'
+      setError(errorMessage)
       return { 
         success: false, 
-        error: error.message || 'Failed to generate report' 
+        error: errorMessage 
       }
     } finally {
       setLoading(false)
@@ -181,9 +199,11 @@ export function useAnalytics() {
         }
       }
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to export data'
+      setError(errorMessage)
       return { 
         success: false, 
-        error: error.message || 'Failed to export data' 
+        error: errorMessage 
       }
     } finally {
       setLoading(false)

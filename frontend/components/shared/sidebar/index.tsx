@@ -22,7 +22,7 @@ export function Sidebar() {
       )}
     >
       <div className="flex-1 overflow-y-auto py-6">
-        {user?.role === 'admin' ? (
+        {user?.role === 'ADMIN' ? (
           <AdminSidebar collapsed={collapsed} pathname={pathname} />
         ) : (
           <TenantSidebar collapsed={collapsed} pathname={pathname} />

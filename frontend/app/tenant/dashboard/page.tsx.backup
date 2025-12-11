@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { 
-  CreditCard, 
-  FileText, 
-  Calendar, 
-  AlertCircle, 
+import {
+  CreditCard,
+  FileText,
+  Calendar,
+  AlertCircle,
   TrendingUp,
   Download,
   Upload,
@@ -49,7 +49,7 @@ export default function TenantDashboard() {
   return (
     <div className="min-h-screen bg-gradient-dark">
       <Header />
-      
+
       <main className="container mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
@@ -65,7 +65,12 @@ export default function TenantDashboard() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Balance Overview */}
-            <BalanceCard balance={balance} waterBill={waterBill} />
+            <BalanceCard 
+              currentBalance={balance}
+              totalPaid={45000}
+              totalDue={15000}
+              nextPaymentDate="2024-02-05"
+            />
 
             {/* Quick Actions */}
             <Card className="glass-effect">
@@ -81,7 +86,7 @@ export default function TenantDashboard() {
                       <span className="font-medium">Upload Payment</span>
                     </Button>
                   </Link>
-                  
+
                   <Link href="/tenant/receipts">
                     <Button className="w-full h-24 flex-col gap-3 bg-success/10 hover:bg-success/20 border border-success/20">
                       <Receipt className="h-6 w-6 text-success" />
@@ -122,7 +127,7 @@ export default function TenantDashboard() {
                   {recentPayments.map((payment) => (
                     <div
                       key={payment.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-secondary-700 hover:bg-secondary-800/50 transition-colors"
+                      className="flex items-center justify-between p-4 rounded-lg border border-secondary-700 hover:bg-secondary-800/50 transition-colors"     
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -176,14 +181,16 @@ export default function TenantDashboard() {
                         <span className="text-2xl font-bold">
                           KSh {payment.amount.toLocaleString()}
                         </span>
-                        <Button size="sm" variant="outline">
-                          Pay Now
-                        </Button>
+                        <Link href="/tenant/payments/new">
+                          <Button size="sm" variant="outline">
+                            Pay Now
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="mt-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
@@ -219,7 +226,7 @@ export default function TenantDashboard() {
                       Add Unit
                     </Button>
                   </div>
-                  
+
                   <div>
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span>Bill Calculation</span>

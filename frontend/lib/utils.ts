@@ -38,3 +38,16 @@ export function generateReceiptNumber(tenantId: string, date: Date = new Date())
   const tenantCode = tenantId.slice(-4).toUpperCase()
   return `MTA-${year}${month}-${tenantCode}`
 }
+
+// Debounce function
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+  
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}

@@ -133,7 +133,7 @@ export function useFileUpload(options: UploadOptions = {}) {
 
       const response = await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
+        onUploadProgress: (progressEvent: any) => {
           const progress = progressEvent.total 
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0
@@ -190,7 +190,7 @@ export function useFileUpload(options: UploadOptions = {}) {
 
       const response = await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
+        onUploadProgress: (progressEvent: any) => {
           const progress = progressEvent.total 
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0

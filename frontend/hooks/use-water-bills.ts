@@ -1,248 +1,252 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useWaterStore } from '@/store/water.store'
 import { api } from '@/lib/api'
-import { WaterBill, WaterReading, CreateReadingData, WaterBillFilters } from '@/types/water.types'
+import { WaterReading, WaterReadingCreateData } from '@/types/water.types'
 
 export function useWaterBills() {
   const {
-    bills,
     readings,
-    selectedBill,
+    selectedReading,
+    summary,
+    report,
     isLoading,
     error,
     filters,
-    pagination,
-    setBills,
     setReadings,
-    setSelectedBill,
+    setSelectedReading,
+    setSummary,
+    setReport,
     setLoading,
     setError,
     setFilters,
-    setPagination,
-    addReading: storeAddReading,
-    updateBill: storeUpdateBill,
-    markPaid: storeMarkPaid,
-    clearFilters: storeClearFilters,
+    clearError,
   } = useWaterStore()
 
-  // Fetch water bills
-  const fetchBills = useCallback(async () => {
+  const fetchReadings = useCallback(async (newFilters?: any) => {
     try {
       setLoading(true)
-      setError(null)
-      
+      clearError()
+
+      const filterParams = newFilters || filters
       const params = new URLSearchParams()
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
+
+      Object.entries(filterParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== '' && value !== null) {
           params.append(key, String(value))
         }
       })
 
-      const response = await api.get(`/water/bills?${params}`)
-      
-      if (response.success && response.data) {
-        setBills(response.data)
-        setPagination(response.pagination || { page: 1, limit: 20, total: 0, pages: 0 })
-      } else {
-        setError(response.message || 'Failed to fetch water bills')
-      }
-    } catch (error: any) {
-      setError(error.message || 'Failed to fetch water bills')
-    } finally {
-      setLoading(false)
-    }
-  }, [filters, setLoading, setError, setBills, setPagination])
+      const response = await api.get(`/water/readings?${params}`)
 
-  // Fetch water readings
-  const fetchReadings = useCallback(async (tenantId?: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const url = tenantId ? `/water/readings/tenant/${tenantId}` : '/water/readings'
-      const response = await api.get(url)
-      
       if (response.success && response.data) {
-        setReadings(response.data)
+        setReadings(response.data.readings || response.data)
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch water readings' 
-        }
+        setError(response.message || 'Failed to fetch water readings')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch water readings' 
-      }
+      setError(error.message || 'Failed to fetch water readings')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [setLoading, setError, setReadings])
+  }, [filters, setLoading, setError, clearError, setReadings])
 
-  // Submit new water reading
-  const submitReading = async (data: CreateReadingData) => {
+  const fetchReading = useCallback(async (id: string) => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const response = await api.post('/water/readings', data)
-      
+      clearError()
+
+      const response = await api.get(`/water/readings/${id}`)
+
       if (response.success && response.data) {
-        storeAddReading(response.data)
+        setSelectedReading(response.data)
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to submit reading' 
-        }
+        setError(response.message || 'Failed to fetch water reading')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to submit reading' 
-      }
+      setError(error.message || 'Failed to fetch water reading')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError, setSelectedReading])
 
-  // Mark bill as paid
-  const markBillAsPaid = async (billId: string, paymentId?: string) => {
+  const createReading = useCallback(async (tenantId: string, data: WaterReadingCreateData) => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const response = await api.put(`/water/bills/${billId}/pay`, { paymentId })
-      
+      clearError()
+
+      const response = await api.post(`/water/tenants/${tenantId}/readings`, data)
+
       if (response.success && response.data) {
-        storeMarkPaid(billId, paymentId)
+        // Refresh readings list
+        await fetchReadings()
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to mark bill as paid' 
-        }
+        setError(response.message || 'Failed to create water reading')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to mark bill as paid' 
-      }
+      setError(error.message || 'Failed to create water reading')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError, fetchReadings])
 
-  // Calculate water bill
-  const calculateBill = async (previousReading: number, currentReading: number) => {
+  const updateReading = useCallback(async (id: string, data: Partial<WaterReadingCreateData>) => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const response = await api.post('/water/calculate', {
-        previousReading,
-        currentReading
+      clearError()
+
+      const response = await api.put(`/water/readings/${id}`, data)
+
+      if (response.success && response.data) {
+        // Refresh reading and list
+        await fetchReading(id)
+        await fetchReadings()
+        return { success: true, data: response.data }
+      } else {
+        setError(response.message || 'Failed to update water reading')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to update water reading')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError, fetchReading, fetchReadings])
+
+  const deleteReading = useCallback(async (id: string) => {
+    try {
+      setLoading(true)
+      clearError()
+
+      const response = await api.delete(`/water/readings/${id}`)
+
+      if (response.success) {
+        // Refresh readings list
+        await fetchReadings()
+        return { success: true }
+      } else {
+        setError(response.message || 'Failed to delete water reading')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to delete water reading')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError, fetchReadings])
+
+  const fetchSummary = useCallback(async (month?: string, year?: number) => {
+    try {
+      setLoading(true)
+      clearError()
+
+      const params = new URLSearchParams()
+      if (month) params.append('month', month)
+      if (year) params.append('year', String(year))
+
+      const response = await api.get(`/water/summary?${params}`)
+
+      if (response.success && response.data) {
+        setSummary(response.data)
+        return { success: true, data: response.data }
+      } else {
+        setError(response.message || 'Failed to fetch water summary')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to fetch water summary')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError, setSummary])
+
+  const fetchReport = useCallback(async (startDate: string, endDate: string) => {
+    try {
+      setLoading(true)
+      clearError()
+
+      const params = new URLSearchParams({ startDate, endDate })
+      const response = await api.get(`/water/report?${params}`)
+
+      if (response.success && response.data) {
+        setReport(response.data)
+        return { success: true, data: response.data }
+      } else {
+        setError(response.message || 'Failed to fetch water report')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to fetch water report')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError, setReport])
+
+  const generateWaterBill = useCallback(async (readingId: string) => {
+    try {
+      setLoading(true)
+      clearError()
+
+      const response = await api.get(`/water/readings/${readingId}/bill`, {
+        responseType: 'blob',
       })
-      
-      if (response.success && response.data) {
-        return { success: true, data: response.data }
+
+      if (response instanceof Blob) {
+        const url = window.URL.createObjectURL(response)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `water-bill-${readingId}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+
+        return { success: true }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to calculate bill' 
-        }
+        setError('Failed to generate water bill')
+        return { success: false, error: 'Failed to generate water bill' }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to calculate bill' 
-      }
+      setError(error.message || 'Failed to generate water bill')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError])
 
-  // Get bill by ID
-  const getBillById = useCallback(async (id: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await api.get(`/water/bills/${id}`)
-      
-      if (response.success && response.data) {
-        setSelectedBill(response.data)
-        return { success: true, data: response.data }
-      } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch bill' 
-        }
-      }
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch bill' 
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [setLoading, setError, setSelectedBill])
-
-  // Get tenant water bills
-  const getTenantBills = useCallback(async (tenantId: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await api.get(`/water/bills/tenant/${tenantId}`)
-      
-      if (response.success && response.data) {
-        return { success: true, data: response.data }
-      } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch tenant bills' 
-        }
-      }
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch tenant bills' 
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [setLoading, setError])
-
-  // Clear filters
-  const clearFilters = () => {
-    storeClearFilters()
-  }
-
-  // Fetch bills on filter change
+  // Fetch readings on mount
   useEffect(() => {
-    fetchBills()
-  }, [filters.page, filters.limit, fetchBills])
+    fetchReadings()
+  }, [fetchReadings])
 
   return {
-    bills,
     readings,
-    selectedBill,
+    selectedReading,
+    summary,
+    report,
     isLoading,
     error,
     filters,
-    pagination,
     setFilters,
-    fetchBills,
     fetchReadings,
-    submitReading,
-    markBillAsPaid,
-    calculateBill,
-    getBillById,
-    getTenantBills,
-    clearFilters,
+    fetchReading,
+    createReading,
+    updateReading,
+    deleteReading,
+    fetchSummary,
+    fetchReport,
+    generateWaterBill,
   }
 }

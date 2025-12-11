@@ -41,6 +41,46 @@ export default function TenantDashboard() {
     { id: 2, dueDate: '2024-02-10', amount: 750, type: 'Water' },
   ]
 
+  const recentActivities = [
+    {
+      id: '1',
+      type: 'payment' as const,
+      title: 'Rent Payment Submitted',
+      description: 'January rent payment of KSh 15,000 submitted',
+      date: '2024-01-05',
+      user: user?.name || 'You',
+      apartment: user?.apartment,
+      amount: 15000,
+      status: 'success' as const
+    },
+    {
+      id: '2',
+      type: 'maintenance' as const,
+      title: 'Maintenance Request',
+      description: 'Leaking faucet in kitchen reported',
+      date: '2024-01-10',
+      apartment: user?.apartment,
+      status: 'info' as const
+    },
+    {
+      id: '3',
+      type: 'notification' as const,
+      title: 'Water Reading Reminder',
+      description: 'Submit water meter reading by end of month',
+      date: '2024-01-15',
+      status: 'warning' as const
+    },
+    {
+      id: '4',
+      type: 'water' as const,
+      title: 'Water Bill Generated',
+      description: 'December water bill: 5 units @ KSh 150',
+      date: '2024-01-01',
+      amount: 750,
+      status: 'info' as const
+    }
+  ]
+
   useEffect(() => {
     // Calculate water bill
     setWaterBill(waterUnits * 150)
@@ -240,6 +280,9 @@ export default function TenantDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Recent Activity - ADDED */}
+            <RecentActivity activities={recentActivities} />
           </div>
         </div>
       </main>

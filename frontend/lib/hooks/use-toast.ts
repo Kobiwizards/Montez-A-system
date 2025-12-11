@@ -15,6 +15,7 @@ interface ToastOptions {
   title: string
   description?: string
   type?: ToastType
+  variant?: 'default' | 'destructive' // Add variant support
   duration?: number
   showClose?: boolean
 }
@@ -24,11 +25,18 @@ export function useToast() {
 
   const addToast = useCallback((options: ToastOptions) => {
     const id = Math.random().toString(36).substring(2, 9)
+    
+    // Map variant to type if provided
+    let type: ToastType = options.type || 'info'
+    if (options.variant === 'destructive') {
+      type = 'error'
+    }
+    
     const newToast: Toast = {
       id,
       title: options.title,
       description: options.description,
-      type: options.type || 'info',
+      type,
       duration: options.duration || 5000,
       showClose: options.showClose !== false,
     }
@@ -52,6 +60,11 @@ export function useToast() {
     setToasts([])
   }, [])
 
+  // Add a generic toast method that accepts the object API
+  const toast = useCallback((options: ToastOptions) => {
+    return addToast(options)
+  }, [addToast])
+
   const success = useCallback((title: string, description?: string) => {
     return addToast({ title, description, type: 'success' })
   }, [addToast])
@@ -73,6 +86,7 @@ export function useToast() {
     addToast,
     removeToast,
     clearToasts,
+    toast, // Add the generic toast method
     success,
     error,
     warning,

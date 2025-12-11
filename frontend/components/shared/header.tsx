@@ -22,7 +22,7 @@ export function Header() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
 
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'ADMIN'
   const navItems = isAdmin ? [
     { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
     { href: '/admin/tenants', label: 'Tenants' },
@@ -106,7 +106,7 @@ export function Header() {
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{user?.role?.toLowerCase()}</p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>

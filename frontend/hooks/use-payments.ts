@@ -1,281 +1,232 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { usePaymentStore } from '@/store/payment.store'
 import { api } from '@/lib/api'
-import { Payment, CreatePaymentData, VerifyPaymentData } from '@/types/payment.types'
+import { Payment, PaymentCreateDTO, PaymentUpdateDTO } from '@/types/payment.types'
 
 export function usePayments() {
   const {
     payments,
-    pendingPayments,
-    filteredPayments,
     selectedPayment,
+    filters,
     isLoading,
     error,
-    filters,
-    pagination,
     setPayments,
-    setPendingPayments,
-    setFilteredPayments,
     setSelectedPayment,
+    setFilters,
     setLoading,
     setError,
-    setFilters,
-    setPagination,
-    addPayment: storeAddPayment,
-    updatePayment: storeUpdatePayment,
-    deletePayment: storeDeletePayment,
-    verifyPayment: storeVerifyPayment,
-    clearFilters: storeClearFilters,
+    clearError,
   } = usePaymentStore()
 
-  const [uploading, setUploading] = useState(false)
-
-  // Fetch payments with current filters
-  const fetchPayments = useCallback(async () => {
+  const fetchPayments = useCallback(async (newFilters?: any) => {
     try {
       setLoading(true)
-      setError(null)
-      
+      clearError()
+
+      const filterParams = newFilters || filters
       const params = new URLSearchParams()
-      Object.entries(filters).forEach(([key, value]) => {
+
+      Object.entries(filterParams).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
           params.append(key, String(value))
         }
       })
 
       const response = await api.get(`/payments?${params}`)
-      
+
       if (response.success && response.data) {
         setPayments(response.data)
-        setPagination(response.pagination || { page: 1, limit: 20, total: 0, pages: 0 })
-        
-        // Update filtered payments based on current filters
-        let filtered = response.data
-        if (filters.status) {
-          filtered = filtered.filter((p: Payment) => p.status === filters.status)
-        }
-        if (filters.type) {
-          filtered = filtered.filter((p: Payment) => p.type === filters.type)
-        }
-        if (filters.month) {
-          filtered = filtered.filter((p: Payment) => p.month === filters.month)
-        }
-        setFilteredPayments(filtered)
+        return { success: true, data: response.data }
       } else {
         setError(response.message || 'Failed to fetch payments')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to fetch payments')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [filters, setLoading, setError, setPayments, setPagination, setFilteredPayments])
+  }, [filters, setLoading, setError, clearError, setPayments])
 
-  // Fetch pending payments
-  const fetchPendingPayments = useCallback(async () => {
+  const fetchPayment = useCallback(async (id: string) => {
     try {
-      const response = await api.get('/payments/pending')
-      
+      setLoading(true)
+      clearError()
+
+      const response = await api.get(`/payments/${id}`)
+
       if (response.success && response.data) {
-        setPendingPayments(response.data)
+        setSelectedPayment(response.data)
+        return { success: true, data: response.data }
+      } else {
+        setError(response.message || 'Failed to fetch payment')
+        return { success: false, error: response.message }
       }
-    } catch (error) {
-      console.error('Failed to fetch pending payments:', error)
+    } catch (error: any) {
+      setError(error.message || 'Failed to fetch payment')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
     }
-  }, [setPendingPayments])
+  }, [setLoading, setError, clearError, setSelectedPayment])
 
-  // Create new payment
-  const createPayment = async (data: CreatePaymentData, files: File[]) => {
+  const createPayment = useCallback(async (data: PaymentCreateDTO) => {
     try {
-      setUploading(true)
-      setError(null)
-      
+      setLoading(true)
+      clearError()
+
       const formData = new FormData()
+      
+      // Append payment data
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (key === 'files') {
+          // Handle files array
+          const files = value as File[]
+          files.forEach((file, index) => {
+            formData.append('files', file)
+          })
+        } else if (value !== undefined && value !== null) {
           formData.append(key, value as string)
         }
-      })
-      
-      files.forEach((file, index) => {
-        formData.append('screenshots', file)
       })
 
       const response = await api.post('/payments', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      
-      if (response.success && response.data) {
-        storeAddPayment(response.data)
-        await fetchPendingPayments()
-        return { success: true, data: response.data }
-      } else {
-        return { 
-          success: false, 
-          error: response.message || 'Payment submission failed' 
-        }
-      }
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Payment submission failed' 
-      }
-    } finally {
-      setUploading(false)
-    }
-  }
 
-  // Verify payment
-  const verifyPayment = async (paymentId: string, data: VerifyPaymentData) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await api.put(`/payments/${paymentId}/verify`, data)
-      
       if (response.success && response.data) {
-        storeVerifyPayment(paymentId, data.status, data.adminNotes)
+        // Refresh payments list
+        await fetchPayments()
         return { success: true, data: response.data }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Payment verification failed' 
-        }
+        setError(response.message || 'Failed to create payment')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Payment verification failed' 
-      }
+      setError(error.message || 'Failed to create payment')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError, fetchPayments])
 
-  // Delete payment
-  const deletePayment = async (paymentId: string) => {
+  const verifyPayment = useCallback(async (id: string, data: PaymentUpdateDTO) => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const response = await api.delete(`/payments/${paymentId}`)
-      
+      clearError()
+
+      const response = await api.put(`/payments/${id}/verify`, data)
+
+      if (response.success && response.data) {
+        // Refresh payment and list
+        await fetchPayment(id)
+        await fetchPayments()
+        return { success: true, data: response.data }
+      } else {
+        setError(response.message || 'Failed to verify payment')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to verify payment')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError, fetchPayment, fetchPayments])
+
+  const rejectPayment = useCallback(async (id: string, notes?: string) => {
+    try {
+      setLoading(true)
+      clearError()
+
+      const response = await api.put(`/payments/${id}/reject`, { adminNotes: notes })
+
+      if (response.success && response.data) {
+        // Refresh payment and list
+        await fetchPayment(id)
+        await fetchPayments()
+        return { success: true, data: response.data }
+      } else {
+        setError(response.message || 'Failed to reject payment')
+        return { success: false, error: response.message }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to reject payment')
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setError, clearError, fetchPayment, fetchPayments])
+
+  const deletePayment = useCallback(async (id: string) => {
+    try {
+      setLoading(true)
+      clearError()
+
+      const response = await api.delete(`/payments/${id}`)
+
       if (response.success) {
-        storeDeletePayment(paymentId)
+        // Refresh payments list
+        await fetchPayments()
         return { success: true }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Payment deletion failed' 
-        }
+        setError(response.message || 'Failed to delete payment')
+        return { success: false, error: response.message }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Payment deletion failed' 
-      }
+      setError(error.message || 'Failed to delete payment')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }
+  }, [setLoading, setError, clearError, fetchPayments])
 
-  // Get payment by ID
-  const getPaymentById = useCallback(async (id: string) => {
+  const generateReceipt = useCallback(async (paymentId: string) => {
     try {
       setLoading(true)
-      setError(null)
-      
-      const response = await api.get(`/payments/${id}`)
-      
-      if (response.success && response.data) {
-        setSelectedPayment(response.data)
-        return { success: true, data: response.data }
+      clearError()
+
+      const response = await api.get(`/payments/${paymentId}/receipt`, {
+        responseType: 'blob',
+      })
+
+      if (response instanceof Blob) {
+        const url = window.URL.createObjectURL(response)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `receipt-${paymentId}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+
+        return { success: true }
       } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch payment' 
-        }
+        setError('Failed to generate receipt')
+        return { success: false, error: 'Failed to generate receipt' }
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch payment' 
-      }
+      setError(error.message || 'Failed to generate receipt')
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
-  }, [setLoading, setError, setSelectedPayment])
-
-  // Fetch tenant payment history
-  const fetchTenantPayments = useCallback(async (filters?: any) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const params = new URLSearchParams()
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== '') {
-            params.append(key, String(value))
-          }
-        })
-      }
-
-      const response = await api.get(`/payments/me/history?${params}`)
-      
-      if (response.success && response.data) {
-        setPayments(response.data)
-        setPagination(response.pagination || { page: 1, limit: 20, total: 0, pages: 0 })
-        return { success: true, data: response.data }
-      } else {
-        return { 
-          success: false, 
-          error: response.message || 'Failed to fetch payments' 
-        }
-      }
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch payments' 
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [setLoading, setError, setPayments, setPagination])
-
-  // Clear filters
-  const clearFilters = () => {
-    storeClearFilters()
-  }
-
-  // Fetch payments on filter change
-  useEffect(() => {
-    fetchPayments()
-  }, [filters.page, filters.limit, fetchPayments])
-
-  // Fetch pending payments on mount
-  useEffect(() => {
-    fetchPendingPayments()
-  }, [fetchPendingPayments])
+  }, [setLoading, setError, clearError])
 
   return {
     payments,
-    pendingPayments,
-    filteredPayments,
     selectedPayment,
+    filters,
     isLoading,
     error,
-    uploading,
-    filters,
-    pagination,
     setFilters,
     fetchPayments,
-    fetchPendingPayments,
+    fetchPayment,
     createPayment,
     verifyPayment,
+    rejectPayment,
     deletePayment,
-    getPaymentById,
-    fetchTenantPayments,
-    clearFilters,
+    generateReceipt,
   }
 }

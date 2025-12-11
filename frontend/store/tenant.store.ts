@@ -1,87 +1,66 @@
 import { create } from 'zustand'
-import { User } from '@/types/auth.types'
-import { Payment } from '@/types/payment.types'
-import { Receipt } from '@/types/receipt.types'
-import { WaterReading } from '@/types/water.types'
+import { Tenant, TenantFilters, TenantStats } from '@/types/tenant.types'
 
-interface TenantState {
-  currentTenant: User | null
-  payments: Payment[]
-  receipts: Receipt[]
-  waterReadings: WaterReading[]
-  balance: number
+interface TenantStore {
+  // State
+  tenants: Tenant[]
+  selectedTenant: Tenant | null
+  filters: TenantFilters
+  stats: TenantStats | null
   isLoading: boolean
   error: string | null
-  
+
   // Actions
-  setCurrentTenant: (tenant: User) => void
-  setPayments: (payments: Payment[]) => void
-  setReceipts: (receipts: Receipt[]) => void
-  setWaterReadings: (readings: WaterReading[]) => void
-  setBalance: (balance: number) => void
+  setTenants: (tenants: Tenant[]) => void
+  setSelectedTenant: (tenant: Tenant | null) => void
+  setFilters: (filters: TenantFilters) => void
+  setStats: (stats: TenantStats | null) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  addPayment: (payment: Payment) => void
-  updatePayment: (paymentId: string, updates: Partial<Payment>) => void
-  addReceipt: (receipt: Receipt) => void
-  addWaterReading: (reading: WaterReading) => void
-  updateWaterReading: (readingId: string, updates: Partial<WaterReading>) => void
-  clearState: () => void
+  clearError: () => void
+  reset: () => void
 }
 
-export const useTenantStore = create<TenantState>((set) => ({
-  currentTenant: null,
-  payments: [],
-  receipts: [],
-  waterReadings: [],
-  balance: 0,
+const initialFilters: TenantFilters = {
+  status: undefined,
+  apartment: undefined,
+  search: '',
+  page: 1,
+  limit: 20,
+}
+
+const initialStats: TenantStats = {
+  total: 0,
+  current: 0,
+  overdue: 0,
+  delinquent: 0,
+  totalOutstanding: 0,
+  averageRent: 0,
+  occupancyRate: 0,
+}
+
+export const useTenantStore = create<TenantStore>((set) => ({
+  // Initial state
+  tenants: [],
+  selectedTenant: null,
+  filters: initialFilters,
+  stats: null,
   isLoading: false,
   error: null,
 
-  setCurrentTenant: (tenant) => set({ currentTenant: tenant }),
-
-  setPayments: (payments) => set({ payments }),
-
-  setReceipts: (receipts) => set({ receipts }),
-
-  setWaterReadings: (readings) => set({ waterReadings: readings }),
-
-  setBalance: (balance) => set({ balance }),
-
-  setLoading: (isLoading) => set({ isLoading }),
-
+  // Actions
+  setTenants: (tenants) => set({ tenants }),
+  setSelectedTenant: (tenant) => set({ selectedTenant: tenant }),
+  setFilters: (filters) => set({ filters: { ...initialFilters, ...filters } }),
+  setStats: (stats) => set({ stats }),
+  setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
-
-  addPayment: (payment) => set((state) => ({
-    payments: [payment, ...state.payments],
-  })),
-
-  updatePayment: (paymentId, updates) => set((state) => ({
-    payments: state.payments.map((payment) =>
-      payment.id === paymentId ? { ...payment, ...updates } : payment
-    ),
-  })),
-
-  addReceipt: (receipt) => set((state) => ({
-    receipts: [receipt, ...state.receipts],
-  })),
-
-  addWaterReading: (reading) => set((state) => ({
-    waterReadings: [reading, ...state.waterReadings],
-  })),
-
-  updateWaterReading: (readingId, updates) => set((state) => ({
-    waterReadings: state.waterReadings.map((reading) =>
-      reading.id === readingId ? { ...reading, ...updates } : reading
-    ),
-  })),
-
-  clearState: () => set({
-    currentTenant: null,
-    payments: [],
-    receipts: [],
-    waterReadings: [],
-    balance: 0,
+  clearError: () => set({ error: null }),
+  reset: () => set({
+    tenants: [],
+    selectedTenant: null,
+    filters: initialFilters,
+    stats: null,
     isLoading: false,
     error: null,
   }),

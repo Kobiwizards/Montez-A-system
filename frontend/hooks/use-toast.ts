@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
-export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 
 export interface Toast {
   id: string
@@ -16,6 +15,7 @@ interface ToastOptions {
   title: string
   description?: string
   type?: ToastType
+  variant?: 'default' | 'destructive'
   duration?: number
   showClose?: boolean
 }
@@ -25,22 +25,30 @@ export function useToast() {
 
   const addToast = useCallback((options: ToastOptions) => {
     const id = Math.random().toString(36).substring(2, 9)
+    
+    // Map variant to type if provided
+    let type: ToastType = options.type || 'info'
+    if (options.variant === 'destructive') {
+      type = 'error'
+    }
+    
+    const duration = options.duration || 5000
     const newToast: Toast = {
       id,
       title: options.title,
       description: options.description,
-      type: options.type || 'info',
-      duration: options.duration || 5000,
+      type,
+      duration,
       showClose: options.showClose !== false,
     }
 
     setToasts(prev => [...prev, newToast])
 
-    // Auto remove if duration is set
-    if (newToast.duration > 0) {
+    // Use the local duration variable which is guaranteed
+    if (duration > 0) {
       setTimeout(() => {
         removeToast(id)
-      }, newToast.duration)
+      }, duration)
     }
 
     return id
@@ -53,6 +61,11 @@ export function useToast() {
   const clearToasts = useCallback(() => {
     setToasts([])
   }, [])
+
+  // Add a generic toast method that accepts the object API
+  const toast = useCallback((options: ToastOptions) => {
+    return addToast(options)
+  }, [addToast])
 
   const success = useCallback((title: string, description?: string) => {
     return addToast({ title, description, type: 'success' })
@@ -75,6 +88,7 @@ export function useToast() {
     addToast,
     removeToast,
     clearToasts,
+    toast, // Add the generic toast method
     success,
     error,
     warning,
