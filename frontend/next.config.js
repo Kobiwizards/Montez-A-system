@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone', // CRITICAL for Render
+  output: 'standalone',
   reactStrictMode: true,
   swcMinify: true,
   images: {
@@ -11,14 +11,12 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-    unoptimized: true, // Better for non-Vercel hosts
+    unoptimized: true,
   },
-  
-  // API rewrites to backend
+  // Optional: Add API proxy for backend
   async rewrites() {
-    // Only add rewrites in production with a backend URL
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (process.env.NODE_ENV === 'production' && backendUrl) {
+    if (backendUrl) {
       return [
         {
           source: '/api/:path*',
@@ -28,9 +26,28 @@ const nextConfig = {
     }
     return [];
   },
-  
-  // Optional: Increase timeout for build
+  // Increase build timeout for Render
   staticPageGenerationTimeout: 300,
+  // Disable strict mode for problematic packages if needed
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  // Handle external packages
+  experimental: {
+    esmExternals: 'loose',
+  },
+  // Webpack configuration to handle missing modules
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
 }
 
 module.exports = nextConfig

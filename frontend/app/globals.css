@@ -24,12 +24,14 @@
     --input: 217 33% 17%;
     --ring: 224 76% 48%;
     --radius: 0.5rem;
+    /* ADD THESE to match tailwind.config.ts */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
   }
 
   .dark {
+    /* Keep the same values for dark mode (consistent dark theme) */
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
     --card: 222 47% 11%;
@@ -49,6 +51,7 @@
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 224 76% 48%;
+    /* ADD THESE to match tailwind.config.ts */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
