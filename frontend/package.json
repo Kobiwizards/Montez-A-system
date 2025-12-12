@@ -8,9 +8,7 @@
     "start": "next start -p $PORT",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "render-build": "npm ci && npm run build",
-    "render-start": "npm start -p $PORT"
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",

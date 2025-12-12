@@ -5,8 +5,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && prisma generate",
     "start": "node dist/server.js",
+    "render-build": "npm ci && npm run build && npm run migrate:deploy",
+    "render-start": "npm start",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",

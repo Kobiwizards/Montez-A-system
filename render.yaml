@@ -1,0 +1,38 @@
+services:
+  # Frontend Service
+  - type: web
+    name: montez-a-frontend # Unique name
+    env: node
+    rootDirectory: frontend # Build from this subdirectory
+    buildCommand: npm ci && npm run build # 'npm ci' installs deps from package-lock
+    startCommand: npm start -p $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_API_URL
+        sync: false # Set this manually in the Render dashboard after backend deploys
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Montez A Property Management
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://montez-a.onrender.com
+    autoDeploy: true
+
+  # Backend Service
+  - type: web
+    name: montez-a-backend # Unique name
+    env: node
+    rootDirectory: backend # Build from this subdirectory
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # You MUST set this secret in the Render dashboard
+      - key: JWT_SECRET
+        sync: false # You MUST set this secret in the Render dashboard
+      - key: PORT
+        value: 3001
+    autoDeploy: true
