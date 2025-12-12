@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: montez-a-frontend
+    env: node
+    buildCommand: npm run render-build
+    startCommand: npm run render-start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://montez-a-system-backend.onrender.com/api
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Montez A Property Management
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://montez-a.onrender.com
+    autoDeploy: true
