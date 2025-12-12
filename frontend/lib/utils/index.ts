@@ -16,11 +16,11 @@ export function formatCurrency(amount: number, currency: string = 'KES'): string
 
 export function formatDate(date: Date | string, format: 'short' | 'long' | 'relative' = 'short'): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  
+
   if (format === 'relative') {
     const now = new Date()
     const diffInDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diffInDays === 0) return 'Today'
     if (diffInDays === 1) return 'Yesterday'
     if (diffInDays < 7) return `${diffInDays} days ago`
@@ -28,7 +28,7 @@ export function formatDate(date: Date | string, format: 'short' | 'long' | 'rela
     if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`
     return `${Math.floor(diffInDays / 365)} years ago`
   }
-  
+
   const options: Intl.DateTimeFormatOptions = format === 'long'
     ? {
         year: 'numeric',
@@ -42,7 +42,7 @@ export function formatDate(date: Date | string, format: 'short' | 'long' | 'rela
         month: 'short',
         day: 'numeric',
       }
-  
+
   return d.toLocaleDateString('en-US', options)
 }
 
@@ -52,7 +52,7 @@ export function generateReceiptNumber(prefix: string = 'MTA'): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
-  
+
   return `${prefix}-${year}${month}${day}-${random}`
 }
 
@@ -102,7 +102,7 @@ export function debounce<T extends (...args: any[]) => any>(
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeout)
     timeout = setTimeout(() => func(...args), wait)
@@ -123,10 +123,47 @@ export function generatePassword(length: number = 12): string {
   return password
 }
 
-// Additional utilities from my previous implementation
+// Export from sub-modules - FIX THE CONFLICT BY RENAMING
 export * from './date-formatters'
 export * from './currency-formatters'
-export * from './file-utils'
+
+// Don't use wildcard export for conflicting modules, export specific functions
+export {
+  getFileExtension,
+  getFileNameWithoutExtension,
+  formatFileSize,
+  isValidFileType,
+  isValidFileSize,
+  createFilePreview,
+  revokeFilePreview,
+  base64ToBlob,
+  readFileAsBase64,
+  generateUniqueFilename,
+  compressImage,
+  isImageFile,
+  isPdfFile,
+  getFileIcon,
+  // Rename the conflicting function
+  downloadFile as downloadFileFromURL,
+} from './file-utils'
+
 export * from './validation-utils'
-export * from './pdf-generator'
-export * from './download-utils'
+
+// FIX: Instead of wildcard export, export specific functions from pdf-generator to avoid circular dependency
+export {
+  generateReceipt,
+  generateWaterBill,
+  generateReport
+} from './pdf-generator'
+export type { ReceiptData } from './pdf-generator'
+
+// Export download-utils without the conflicting function
+export {
+  downloadFileFromBlob,
+  downloadReceipt,
+  downloadWaterBill,
+  downloadReport,
+  downloadCSV,
+  downloadJSON,
+  downloadImage,
+} from './download-utils'

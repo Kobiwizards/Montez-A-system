@@ -7,7 +7,7 @@ export interface Toast {
   title: string
   description?: string
   type: ToastType
-  duration?: number
+  duration: number  // Make it required
   showClose?: boolean
 }
 
@@ -15,7 +15,7 @@ interface ToastOptions {
   title: string
   description?: string
   type?: ToastType
-  variant?: 'default' | 'destructive' // Add variant support
+  variant?: 'default' | 'destructive'
   duration?: number
   showClose?: boolean
 }
@@ -32,21 +32,22 @@ export function useToast() {
       type = 'error'
     }
     
+    const duration = options.duration || 5000
     const newToast: Toast = {
       id,
       title: options.title,
       description: options.description,
       type,
-      duration: options.duration || 5000,
+      duration, // Now duration is guaranteed to be a number
       showClose: options.showClose !== false,
     }
 
     setToasts(prev => [...prev, newToast])
 
-    if (newToast.duration > 0) {
+    if (duration > 0) {
       setTimeout(() => {
         removeToast(id)
-      }, newToast.duration)
+      }, duration)
     }
 
     return id

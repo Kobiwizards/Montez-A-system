@@ -42,9 +42,9 @@ export function ApiProvider({ children }: ApiProviderProps) {
     }
   }
 
-  return (
-    <ApiContext.Provider value={value}>
-      {children}
-    </ApiContext.Provider>
+  return React.createElement(
+    ApiContext.Provider,
+    { value },
+    children
   )
 }

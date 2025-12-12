@@ -1,4 +1,5 @@
-import type { Metadata } from 'next'
+'use client' // ADD THIS LINE AT THE TOP
+
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/shared/theme-provider'
@@ -16,17 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono',
 })
 
-export const metadata: Metadata = {
-  title: 'Montez A Property Management | Modern Apartment Management',
-  description: 'Professional property management system for Montez A Apartments along Kizito Road',
-  keywords: ['property management', 'rent collection', 'apartment management', 'Montez A'],
-  authors: [{ name: 'Montez A Management' }],
-  creator: 'Montez A Management System',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#1E40AF' },
-    { media: '(prefers-color-scheme: dark)', color: '#0F172A' },
-  ],
-}
+// REMOVE the metadata export since it's now a client component
 
 export default function RootLayout({
   children,
@@ -34,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider
           attribute="class"

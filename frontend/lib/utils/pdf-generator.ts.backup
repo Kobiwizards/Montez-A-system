@@ -1,0 +1,250 @@
+// Check if we're in browser environment
+const isBrowser = typeof window !== 'undefined'
+
+// Only import jsPDF and autoTable in browser
+let jsPDF: any = null
+let autoTable: any = null
+
+if (isBrowser) {
+  import('jspdf').then((module) => {
+    jsPDF = module.default
+  })
+  import('jspdf-autotable').then((module) => {
+    autoTable = module.default
+  })
+}
+
+export interface ReceiptData {
+  receiptNumber: string
+  date: string
+  tenantName: string
+  tenantEmail: string
+  apartment: string
+  amount: number
+  paymentMethod: string
+  paymentType: string
+  month: string
+  description?: string
+  transactionCode?: string
+  total: number
+}
+
+// Helper function to get safe string representation
+function getSafeNumberString(value: any): string {
+  try {
+    // Convert to number first
+    const num = typeof value === 'number' ? value :
+                value instanceof Number ? value.valueOf() :
+                Number(value);
+
+    // Check if it's a valid number
+    if (isNaN(num)) return '0';
+
+    // Format with thousands separators
+    return num.toLocaleString();
+  } catch (error) {
+    console.error('Error formatting number:', error);
+    return '0';
+  }
+}
+
+export async function generateReceipt(data: ReceiptData): Promise<Blob | null> {
+  if (!isBrowser) {
+    console.warn('PDF generation only available in browser')
+    return null
+  }
+
+  // Wait for jsPDF to load
+  if (!jsPDF) {
+    await import('jspdf').then((module) => {
+      jsPDF = module.default
+    })
+  }
+
+  if (!autoTable) {
+    await import('jspdf-autotable').then((module) => {
+      autoTable = module.default
+    })
+  }
+
+  // Create document
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  })
+
+  // Add logo/header
+  doc.setFontSize(20)
+  doc.setTextColor(40, 40, 150)
+  doc.text('Montez A Apartments', 105, 20, { align: 'center' })
+
+  doc.setFontSize(12)
+  doc.setTextColor(100, 100, 100)
+  doc.text('Kizito Road • Professional Property Management', 105, 28, { align: 'center' })
+
+  // Receipt title
+  doc.setFontSize(16)
+  doc.setTextColor(0, 0, 0)
+  doc.text('PAYMENT RECEIPT', 105, 40, { align: 'center' })
+
+  // Receipt details
+  doc.setFontSize(10)
+  const detailsY = 50
+
+  // Left column
+  doc.text(`Receipt No: ${data.receiptNumber}`, 20, detailsY)
+  doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 20, detailsY + 6)
+  doc.text(`Tenant: ${data.tenantName}`, 20, detailsY + 12)
+  doc.text(`Email: ${data.tenantEmail}`, 20, detailsY + 18)
+
+  // Right column
+  doc.text(`Apartment: ${data.apartment}`, 150, detailsY)
+  doc.text(`Payment Method: ${data.paymentMethod}`, 150, detailsY + 6)
+  doc.text(`Type: ${data.paymentType}`, 150, detailsY + 12)
+  doc.text(`Month: ${data.month}`, 150, detailsY + 18)
+
+  // Transaction details
+  const tableY = detailsY + 30
+
+  // Get safe formatted amounts
+  const amountFormatted = getSafeNumberString(data.amount)
+  const totalFormatted = getSafeNumberString(data.total)
+
+  // Create tableData array - FIX: Use a simpler approach
+  const tableData = [
+    ['Description', 'Amount (KES)'],
+    [data.description || `${data.paymentType} for ${data.month}`, `KSh ${amountFormatted}`],
+  ] as any[][];
+
+  if (data.transactionCode) {
+    tableData.push(['Transaction Code', data.transactionCode])
+  }
+
+  tableData.push(['', ''])
+  tableData.push(['Total', `KSh ${totalFormatted}`])
+
+  // Generate table
+  (doc as any).autoTable({
+    startY: tableY,
+    head: [tableData[0]],
+    body: tableData.slice(1, -2),
+    theme: 'grid',
+    headStyles: { fillColor: [40, 40, 150] },
+    margin: { left: 20, right: 20 },
+  })
+
+  // Total row
+  const finalY = (doc as any).lastAutoTable.finalY + 10
+  doc.setFontSize(12)
+  doc.setFont(undefined, 'bold')
+  doc.text(tableData[tableData.length - 2][0], 20, finalY)
+  doc.text(tableData[tableData.length - 2][1], 170, finalY, { align: 'right' })
+
+  // Footer
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(100, 100, 100)
+  const footerY = 280
+  doc.text('This is an official receipt from Montez A Apartments', 105, footerY, { align: 'center' })
+  doc.text('For any inquiries, contact: management@monteza.com | +254 700 000 000', 105, footerY + 6, { align: 'center' })
+
+  // Generate blob
+  const pdfBlob = doc.output('blob')
+  return pdfBlob
+}
+
+export async function generateWaterBill(data: any): Promise<Blob | null> {
+  if (!isBrowser) return null
+
+  try {
+    if (!jsPDF) {
+      await import('jspdf').then((module) => {
+        jsPDF = module.default
+      })
+    }
+
+    const doc = new jsPDF()
+    doc.setFontSize(16)
+    doc.text('WATER BILL - MONTEZ A APARTMENTS', 20, 20)
+
+    doc.setFontSize(12)
+    doc.text(`Tenant: ${data.tenantName || 'N/A'}`, 20, 35)
+    doc.text(`Apartment: ${data.apartment || 'N/A'}`, 20, 42)
+    doc.text(`Month: ${data.month || 'N/A'}`, 20, 49)
+
+    // Use safe formatting
+    doc.text(`Previous Reading: ${getSafeNumberString(data.previousReading)}`, 20, 56)
+    doc.text(`Current Reading: ${getSafeNumberString(data.currentReading)}`, 20, 63)
+    doc.text(`Units Consumed: ${getSafeNumberString(data.units)}`, 20, 70)
+    doc.text(`Rate per Unit: KSh ${getSafeNumberString(data.rate)}`, 20, 77)
+    doc.text(`Total Amount: KSh ${getSafeNumberString(data.amount)}`, 20, 84)
+
+    doc.text('Signature:', 20, 100)
+    doc.line(20, 105, 80, 105)
+
+    const pdfBlob = doc.output('blob')
+    return pdfBlob
+  } catch (error) {
+    console.error('Error generating water bill:', error)
+    return null
+  }
+}
+
+export async function generateReport(data: any, type: string): Promise<Blob | null> {
+  if (!isBrowser) return null
+
+  try {
+    if (!jsPDF) {
+      await import('jspdf').then((module) => {
+        jsPDF = module.default
+      })
+    }
+
+    if (!autoTable) {
+      await import('jspdf-autotable').then((module) => {
+        autoTable = module.default
+      })
+    }
+
+    const doc = new jsPDF()
+    doc.setFontSize(20)
+    doc.text(`${type.toUpperCase()} REPORT`, 105, 15, { align: 'center' })
+
+    doc.setFontSize(12)
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 25)
+
+    if (data.title) {
+      doc.text(`Title: ${data.title}`, 20, 35)
+    }
+
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      const headers = Object.keys(data.items[0])
+      // FIX: Explicitly type the rows array
+      const rows: string[][] = data.items.map((item: any) =>
+        headers.map(header => {
+          const value = item[header]
+          if (typeof value === 'number' || value instanceof Number || !isNaN(Number(value))) {
+            return getSafeNumberString(value)
+          } else if (value instanceof Date) {
+            return value.toLocaleDateString()
+          }
+          return String(value || '')
+        })
+      )
+
+      (doc as any).autoTable({
+        startY: 45,
+        head: [headers],
+        body: rows,
+        theme: 'grid',
+      })
+    }
+
+    const pdfBlob = doc.output('blob')
+    return pdfBlob
+  } catch (error) {
+    console.error('Error generating report:', error)
+    return null
+  }
+}

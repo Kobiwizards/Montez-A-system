@@ -61,6 +61,7 @@ export const revokeFilePreview = (url: string): void => {
 
 /**
  * Download file from URL
+ * RENAMED to avoid conflict with download-utils
  */
 export const downloadFile = (
   url: string,
