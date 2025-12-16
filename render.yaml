@@ -3,15 +3,15 @@ services:
     name: montez-a-frontend
     env: node
     rootDirectory: frontend
-    buildCommand: npm install --legacy-peer-deps && npm run build
-    startCommand: npm start -p $PORT
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: NEXT_PUBLIC_API_URL
-        sync: false
+        value: https://montez-a-backend.onrender.com/api
       - key: NEXT_PUBLIC_APP_NAME
         value: Montez A Property Management
     autoDeploy: true
