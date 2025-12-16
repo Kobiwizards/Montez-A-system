@@ -3,7 +3,7 @@ services:
     name: montez-a-frontend
     env: node
     rootDirectory: frontend
-    buildCommand: npm cache clean --force && npm ci && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     startCommand: npm start -p $PORT
     envVars:
       - key: NODE_ENV
