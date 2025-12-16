@@ -1,4 +1,5 @@
 services:
+  # Frontend Service (Next.js)
   - type: web
     name: montez-a-frontend
     env: node
@@ -14,13 +15,16 @@ services:
         value: https://montez-a-backend.onrender.com/api
       - key: NEXT_PUBLIC_APP_NAME
         value: Montez A Property Management
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://montez-a.onrender.com
     autoDeploy: true
 
+  # Backend Service (Node.js + Prisma)
   - type: web
     name: montez-a-backend
     env: node
     rootDirectory: backend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npx tsx prisma/seed.ts && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -28,7 +32,23 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
-        sync: false
+        value: 4b9f8c7a3e1d5f2a8c6b9e0d7f3a2c5b8d1e4f7a9c3b6d0e8f2a5c7b9d1e3f6a8c
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: REFRESH_TOKEN_SECRET
+        value: 6d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e
+      - key: REFRESH_TOKEN_EXPIRES_IN
+        value: 30d
       - key: PORT
         value: 3001
+      - key: APP_URL
+        value: https://montez-a.onrender.com
+      - key: CORS_ORIGIN
+        value: https://montez-a.onrender.com
+      - key: WATER_RATE_PER_UNIT
+        value: 150
+      - key: ONE_BEDROOM_RENT
+        value: 15000
+      - key: TWO_BEDROOM_RENT
+        value: 18000
     autoDeploy: true

@@ -49,21 +49,39 @@ export class AuthController {
 
       // Generate tokens
       const accessToken = jwt.sign(
-        {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
-        },
-        config.jwtSecret,
-        { expiresIn: '24h' } // Fixed: Use string literal instead of config.jwtExpiresIn
-      )
+  {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
+  },
+  config.jwtSecret,
+  { expiresIn: '24h' } // Fixed: Use string literal instead of config.jwtExpiresIn
+)
 
-      const refreshToken = jwt.sign(
-        { id: user.id, email: user.email },
-        config.jwtSecret,
-        { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
-      )
+const refreshToken = jwt.sign(
+  { id: user.id, email: user.email },
+  config.jwtSecret,
+  { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
+)
+
+// TO:
+const accessToken = jwt.sign(
+  {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
+  },
+  config.jwtSecret,
+  { expiresIn: config.jwtExpiresIn } // Use config value
+)
+
+const refreshToken = jwt.sign(
+  { id: user.id, email: user.email },
+  config.refreshTokenSecret, // Use refresh token secret
+  { expiresIn: config.refreshTokenExpiresIn } // Use config value
+)
 
       // Update last login time
       await prisma.user.update({
