@@ -13,6 +13,7 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
+  // Remove or fix the webpack config
   // Optional: Add API proxy for backend
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -28,26 +29,6 @@ const nextConfig = {
   },
   // Increase build timeout for Render
   staticPageGenerationTimeout: 300,
-  // Disable strict mode for problematic packages if needed
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
-  // Handle external packages
-  experimental: {
-    esmExternals: 'loose',
-  },
-  // Webpack configuration to handle missing modules
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-    return config;
-  },
 }
 
-module.exports = nextConfig
+module.exports = nextConfig;
