@@ -15,7 +15,7 @@ export function formatCurrency(amount: number): string {
 
 export function formatDate(dateString: string, format: 'short' | 'long' = 'short'): string {
   const date = new Date(dateString)
-  
+
   if (format === 'short') {
     return date.toLocaleDateString('en-KE', {
       day: 'numeric',
@@ -23,7 +23,7 @@ export function formatDate(dateString: string, format: 'short' | 'long' = 'short
       year: 'numeric'
     })
   }
-  
+
   return date.toLocaleDateString('en-KE', {
     weekday: 'long',
     year: 'numeric',
@@ -39,15 +39,31 @@ export function generateReceiptNumber(tenantId: string, date: Date = new Date())
   return `MTA-${year}${month}-${tenantCode}`
 }
 
-// Debounce function
+// Debounce function - FIXED to work in browser and Node.js
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-  
+  let timeout: ReturnType<typeof setTimeout> | null = null
+
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout)
     timeout = setTimeout(() => func(...args), wait)
   }
+}
+
+// Add these commonly used utilities:
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength) + '...'
+}
+
+export function validateEmail(email: string): boolean {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return re.test(email)
+}
+
+export function validatePhone(phone: string): boolean {
+  const re = /^(\+254|0)[17]\d{8}$/
+  return re.test(phone)
 }
