@@ -1,7 +1,7 @@
 import { AuthRequest } from '../types/express'
 import { Request, Response } from 'express'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import * as bcrypt from 'bcryptjs'
+import * as jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
 import { config } from '../config/index'
 import { AuditLogService } from '../services/audit.service'
@@ -47,7 +47,7 @@ export class AuthController {
         })
       }
 
-      // Generate tokens
+      // Generate tokens - cast to string
       const accessToken = jwt.sign(
   {
     id: user.id,
@@ -56,31 +56,13 @@ export class AuthController {
     apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
   },
   config.jwtSecret,
-  { expiresIn: '24h' } // Fixed: Use string literal instead of config.jwtExpiresIn
+  { expiresIn: '7d' } // Use string literal from .env
 )
 
 const refreshToken = jwt.sign(
   { id: user.id, email: user.email },
-  config.jwtSecret,
-  { expiresIn: '7d' } // Fixed: Use string literal instead of config.refreshTokenExpiresIn
-)
-
-// TO:
-const accessToken = jwt.sign(
-  {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
-  },
-  config.jwtSecret,
-  { expiresIn: config.jwtExpiresIn } // Use config value
-)
-
-const refreshToken = jwt.sign(
-  { id: user.id, email: user.email },
-  config.refreshTokenSecret, // Use refresh token secret
-  { expiresIn: config.refreshTokenExpiresIn } // Use config value
+  config.refreshTokenSecret,
+  { expiresIn: '30d' } // Use string literal from .env
 )
 
       // Update last login time

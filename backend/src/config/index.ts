@@ -1,5 +1,5 @@
-import dotenv from 'dotenv'
-import path from 'path'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
 
 // Load environment variables
 const envPath = path.join(process.cwd(), '.env')
@@ -15,11 +15,11 @@ export const config = {
   // Database
   databaseUrl: process.env.DATABASE_URL || '',
 
-  // JWT - Add type assertions for expiresIn
+  // JWT
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-  jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string | number,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d', // String only
   refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET || 'your-refresh-secret-key',
-  refreshTokenExpiresIn: (process.env.REFRESH_TOKEN_EXPIRES_IN || '30d') as string | number,
+  refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d', // String only
 
   // Email
   email: {

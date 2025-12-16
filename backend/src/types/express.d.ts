@@ -5,14 +5,11 @@ declare global {
   namespace Express {
     interface Request {
       user?: User
-      files?: any
+      // Remove files declaration - conflicts with multer types
     }
   }
 }
 
 export interface AuthRequest extends Request {
   user?: User
-  files?: any
 }
-
-export {}
