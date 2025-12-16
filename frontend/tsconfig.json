@@ -18,7 +18,7 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",  // ← ADD THIS (CRITICAL)
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
