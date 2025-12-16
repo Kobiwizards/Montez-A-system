@@ -5,11 +5,16 @@ declare global {
   namespace Express {
     interface Request {
       user?: User
-      // Remove files declaration - conflicts with multer types
     }
   }
 }
 
 export interface AuthRequest extends Request {
   user?: User
+  body?: any
+  params?: any
+  query?: any
+  ip?: string
+  get?(name: string): string | undefined
+  files?: any
 }
