@@ -7,23 +7,10 @@ declare global {
       user?: User
       files?: any
     }
-    
-    namespace Multer {
-      interface File {
-        fieldname: string
-        originalname: string
-        encoding: string
-        mimetype: string
-        size: number
-        destination: string
-        filename: string
-        path: string
-        buffer: Buffer
-      }
-    }
   }
 }
 
+// Extend AuthRequest to include all Express Request properties
 export interface AuthRequest extends Request {
   user?: User
 }
