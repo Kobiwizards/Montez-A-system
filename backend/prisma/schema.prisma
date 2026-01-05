@@ -3,8 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider     = "postgresql"
-  url          = env("DATABASE_URL")
+  provider = "postgresql"
   relationMode = "prisma"
 }
 
@@ -77,8 +76,8 @@ model User {
   payments            Payment[]
   receipts            Receipt[]
   waterReadings       WaterReading[]
-  maintenanceRequests MaintenanceRequest[] // ← ADDED: Opposite relation
-  notifications       Notification[] // ← ADDED: Opposite relation
+  maintenanceRequests MaintenanceRequest[]
+  notifications       Notification[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -122,7 +121,7 @@ model Payment {
 
   // Relations
   receipts      Receipt[]
-  waterReadings WaterReading[] // ← ADDED: Opposite relation
+  waterReadings WaterReading[]
 
   @@index([tenantId])
   @@index([status])
@@ -134,8 +133,8 @@ model Receipt {
   id        String  @id @default(cuid())
   paymentId String  @unique
   payment   Payment @relation(fields: [paymentId], references: [id])
-  tenantId  String // ← ADDED: For direct relation to user
-  tenant    User    @relation(fields: [tenantId], references: [id]) // ← ADDED: Opposite relation
+  tenantId  String
+  tenant    User    @relation(fields: [tenantId], references: [id])
 
   // Receipt details
   receiptNumber String   @unique // Format: MTA-2024-001
@@ -149,7 +148,7 @@ model Receipt {
 
   @@index([receiptNumber])
   @@index([generatedAt])
-  @@index([tenantId]) // ← ADDED: Index for tenant relation
+  @@index([tenantId])
 }
 
 model WaterReading {
@@ -178,7 +177,7 @@ model WaterReading {
   @@index([tenantId])
   @@index([month])
   @@index([paid])
-  @@index([paymentId]) // ← ADDED: Index for payment relation
+  @@index([paymentId])
 }
 
 model AnalyticsSnapshot {
