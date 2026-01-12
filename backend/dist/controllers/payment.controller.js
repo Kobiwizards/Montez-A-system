@@ -1,7 +1,37 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentController = void 0;
 const prisma_1 = require("../lib/prisma");
@@ -10,8 +40,8 @@ const receipt_service_1 = require("../services/receipt.service");
 const email_service_1 = require("../services/email.service");
 const file_service_1 = require("../services/file.service");
 const index_1 = require("../config/index");
-const path_1 = __importDefault(require("path"));
-const promises_1 = __importDefault(require("fs/promises"));
+const path = __importStar(require("path"));
+const fs = __importStar(require("fs/promises"));
 class PaymentController {
     constructor() {
         this.getAllPayments = async (req, res) => {
@@ -140,12 +170,12 @@ class PaymentController {
                         filesArray = req.files;
                     }
                     else if (typeof req.files === "object") {
-                        // Convert object of arrays to single array with proper typing
+                        // Convert object of arrays to single array
                         const filesObj = req.files;
                         filesArray = Object.values(filesObj).flat();
                     }
                     for (const file of filesArray) {
-                        const filePath = await this.fileService.saveFile(file, tenant.id, "payments");
+                        const filePath = await this.fileService.saveFile(file, "payments");
                         screenshotUrls.push(filePath);
                     }
                 }
@@ -445,7 +475,7 @@ class PaymentController {
                 // Delete associated receipts files
                 for (const receipt of payment.receipts) {
                     try {
-                        await promises_1.default.unlink(path_1.default.join(index_1.config.receiptsPath, receipt.filePath));
+                        await fs.unlink(path.join(index_1.config.receiptsPath, receipt.filePath));
                     }
                     catch (error) {
                         console.warn('Failed to delete receipt file:', error);
@@ -458,7 +488,7 @@ class PaymentController {
                 // Delete screenshot files
                 for (const screenshotUrl of payment.screenshotUrls) {
                     try {
-                        await promises_1.default.unlink(path_1.default.join(index_1.config.uploadPath, screenshotUrl));
+                        await fs.unlink(path.join(index_1.config.uploadPath, screenshotUrl));
                     }
                     catch (error) {
                         console.warn('Failed to delete screenshot:', error);

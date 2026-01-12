@@ -4,10 +4,10 @@ import { prisma } from '../lib/prisma'
 import { AuditLogService } from '../services/audit.service'
 import { ReceiptService } from '../services/receipt.service'
 import { EmailService } from '../services/email.service'
-import { FileService, UploadedFile } from '../services/file.service'
+import { FileService } from '../services/file.service'
 import { config } from '../config/index'
-import path from 'path'
-import fs from 'fs/promises'
+import * as path from 'path'
+import * as fs from 'fs/promises'
 
 export class PaymentController {
   private auditLogService: AuditLogService
@@ -181,17 +181,13 @@ export class PaymentController {
         if (Array.isArray(req.files)) {
           filesArray = req.files
         } else if (typeof req.files === "object") {
-          // Convert object of arrays to single array with proper typing
+          // Convert object of arrays to single array
           const filesObj = req.files as { [fieldname: string]: Express.Multer.File[] }
           filesArray = Object.values(filesObj).flat()
         }
         
         for (const file of filesArray) {
-          const filePath = await this.fileService.saveFile(
-            file as UploadedFile,
-            tenant.id,
-            "payments"
-          )
+          const filePath = await this.fileService.saveFile(file, "payments")
           screenshotUrls.push(filePath)
         }
       }

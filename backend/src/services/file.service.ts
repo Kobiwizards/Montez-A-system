@@ -1,35 +1,25 @@
-import { config } from '../config/index'
-import path from 'path'
-import fs from 'fs/promises'
-import { v4 as uuidv4 } from 'uuid'
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import { config } from '../config'
 import multer from 'multer'
-
-export interface UploadedFile {
-  fieldname: string
-  originalname: string
-  encoding: string
-  mimetype: string
-  buffer: Buffer
-  size: number
-}
 
 export class FileService {
   private upload: multer.Multer
 
   constructor() {
-    this.upload = multer({
-      storage: multer.memoryStorage(),
+    const storage = multer.memoryStorage()
+    this.upload = multer({ 
+      storage,
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: config.maxFileSize,
       },
-      fileFilter: (_req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
-        if (allowedTypes.includes(file.mimetype)) {
+      fileFilter: (req, file, cb) => {
+        if (config.allowedFileTypes.includes(file.mimetype)) {
           cb(null, true)
         } else {
-          cb(new Error('Invalid file type'))
+          cb(new Error(`Invalid file type. Allowed types: ${config.allowedFileTypes.join(', ')}`))
         }
-      },
+      }
     })
   }
 
@@ -37,92 +27,72 @@ export class FileService {
     return this.upload
   }
 
-  async saveFile(
-    file: UploadedFile,
-    userId: string,
-    type: 'payments' | 'maintenance'
-  ): Promise<string> {
+  async saveFile(file: Express.Multer.File, subfolder: string = ''): Promise<string> {
+    const uploadDir = path.join(config.uploadPath, subfolder)
+    
     // Create directory if it doesn't exist
-    const userDir = path.join(config.uploadPath, userId, type)
-    await fs.mkdir(userDir, { recursive: true })
-
+    await fs.mkdir(uploadDir, { recursive: true })
+    
     // Generate unique filename
     const fileExt = path.extname(file.originalname)
-    const fileName = `${uuidv4()}${fileExt}`
-    const filePath = path.join(userDir, fileName)
-
-    // Save file
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExt}`
+    const filePath = path.join(uploadDir, fileName)
+    
+    // Save file - FIX: Use file.buffer directly
     await fs.writeFile(filePath, file.buffer)
-
-    // Return relative path for storage in database
-    return path.join(userId, type, fileName)
+    
+    return path.join(subfolder, fileName)
   }
 
   async deleteFile(filePath: string): Promise<void> {
+    const fullPath = path.join(config.uploadPath, filePath)
+    
     try {
-      const fullPath = path.join(config.uploadPath, filePath)
       await fs.unlink(fullPath)
     } catch (error) {
-      console.warn('Failed to delete file:', error)
-      // Don't throw error for file deletion failures
+      console.error('Failed to delete file:', error)
     }
-  }
-
-  async getFile(filePath: string): Promise<Buffer> {
-    const fullPath = path.join(config.uploadPath, filePath)
-    return fs.readFile(fullPath)
   }
 
   async fileExists(filePath: string): Promise<boolean> {
     try {
-      const fullPath = path.join(config.uploadPath, filePath)
-      await fs.access(fullPath)
+      await fs.access(filePath)
       return true
     } catch {
       return false
     }
   }
 
-  async validateFile(
-    file: UploadedFile,
-    options: {
-      maxSize?: number
-      allowedTypes?: string[]
-    } = {}
-  ): Promise<{ valid: boolean; error?: string }> {
-    const { maxSize = 5 * 1024 * 1024, allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'] } = options
-
-    // Check file size
-    if (file.size > maxSize) {
-      return {
-        valid: false,
-        error: `File size exceeds ${maxSize / 1024 / 1024}MB limit`,
-      }
-    }
-
-    // Check file type
-    if (!allowedTypes.includes(file.mimetype)) {
-      return {
-        valid: false,
-        error: `File type not allowed. Allowed types: ${allowedTypes.join(', ')}`,
-      }
-    }
-
-    return { valid: true }
+  async getFileSize(filePath: string): Promise<number> {
+    const stats = await fs.stat(filePath)
+    return stats.size
   }
 
-  async cleanupOldFiles(daysOld: number = 30): Promise<number> {
+  async listFiles(directory: string): Promise<string[]> {
     try {
+      return await fs.readdir(directory)
+    } catch (error) {
+      console.error('Failed to list files:', error)
+      return []
+    }
+  }
+
+  async cleanupOldFiles(directory: string, daysOld: number = 30): Promise<void> {
+    try {
+      const files = await this.listFiles(directory)
       const cutoffDate = new Date()
       cutoffDate.setDate(cutoffDate.getDate() - daysOld)
 
-      // This is a simplified implementation
-      // In production, you might want to track file creation dates in the database
-      console.log(`File cleanup for files older than ${daysOld} days would run here`)
-      return 0
+      for (const file of files) {
+        const filePath = path.join(directory, file)
+        const stats = await fs.stat(filePath)
+        
+        if (stats.mtime < cutoffDate) {
+          await this.deleteFile(filePath)
+        }
+      }
     } catch (error) {
-      console.error('File cleanup error:', error)
-      return 0
+      console.error('Failed to cleanup old files:', error)
     }
   }
 }

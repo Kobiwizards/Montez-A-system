@@ -225,4 +225,25 @@ export class Validators {
     // Add other country validations as needed
     return true
   }
+
+  static validateImageBuffer(buffer: Buffer): boolean {
+    try {
+      // Check if buffer has valid image header
+      const header = buffer.toString('hex', 0, 4)
+      
+      // Check for common image signatures
+      const imageSignatures = [
+        'ffd8ffe0', // JPEG
+        '89504e47', // PNG
+        '47494638', // GIF
+        '424d',     // BMP
+        '49492a00', // TIFF
+        '4d4d002a'  // TIFF (big endian)
+      ]
+      
+      return imageSignatures.some(sig => header.startsWith(sig))
+    } catch {
+      return false
+    }
+  }
 }

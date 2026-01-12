@@ -30,7 +30,7 @@ class MaintenanceController {
                 const imageUrls = [];
                 if (req.files && Array.isArray(req.files)) {
                     for (const file of req.files) {
-                        const filePath = await this.fileService.saveFile(file, tenant.id, 'maintenance');
+                        const filePath = await this.fileService.saveFile(file, 'maintenance');
                         imageUrls.push(filePath);
                     }
                 }
@@ -245,7 +245,7 @@ class MaintenanceController {
                     userAgent: req.get('user-agent'),
                 });
                 // Send notification to tenant
-                await this.emailService.sendMaintenanceUpdate(existingRequest.tenant, request);
+                await this.emailService.sendMaintenanceUpdate(existingRequest.tenant, request, 'updated');
                 return res.status(200).json({
                     success: true,
                     message: 'Maintenance request updated successfully',

@@ -3,7 +3,7 @@ import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AuditLogService } from '../services/audit.service'
 import { EmailService } from '../services/email.service'
-import { FileService, UploadedFile } from '../services/file.service'
+import { FileService } from '../services/file.service'
 
 export class MaintenanceController {
   private auditLogService: AuditLogService
@@ -43,11 +43,7 @@ export class MaintenanceController {
       const imageUrls: string[] = []
       if (req.files && Array.isArray(req.files)) {
         for (const file of req.files) {
-          const filePath = await this.fileService.saveFile(
-            file as UploadedFile,
-            tenant.id,
-            'maintenance'
-          )
+          const filePath = await this.fileService.saveFile(file, 'maintenance')
           imageUrls.push(filePath)
         }
       }
@@ -299,7 +295,7 @@ export class MaintenanceController {
       await this.emailService.sendMaintenanceUpdate(
         existingRequest.tenant,
         request,
-        
+        'updated'
       )
 
       return res.status(200).json({
