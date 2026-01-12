@@ -1,4 +1,4 @@
-import { AuthRequest } from '../types/express'
+import { AuthRequest } from '../types'
 import { Request, Response } from 'express'
 import * as bcrypt from 'bcryptjs'
 import * as jwt from 'jsonwebtoken'

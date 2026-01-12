@@ -1,4 +1,4 @@
-import { AuthRequest } from '../types/express'
+import { AuthRequest } from '../types'
 import cors from 'cors'
 
 // Allow both local development and production URLs

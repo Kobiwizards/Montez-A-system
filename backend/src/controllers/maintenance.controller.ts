@@ -1,4 +1,4 @@
-import { AuthRequest } from '../types/express'
+import { AuthRequest } from '../types'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AuditLogService } from '../services/audit.service'

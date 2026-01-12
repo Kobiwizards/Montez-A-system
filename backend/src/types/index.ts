@@ -1,22 +1,12 @@
 import { Request } from 'express';
 import { User } from '@prisma/client';
 
-// Extend Express Request interface globally
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-      files?: Express.Multer.File[];
-    }
-  }
-}
-
-// AuthRequest extends Express Request with our custom properties
+// Main AuthRequest type that properly extends Express Request
 export interface AuthRequest extends Request {
   user?: User;
 }
 
-// Pagination types
+// Common types
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -34,22 +24,18 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// API Response wrapper
 export interface ApiResponse<T> {
   success: boolean;
   message?: string;
   data?: T;
   errors?: ValidationError[];
-  timestamp?: Date;
 }
 
-// Validation error
 export interface ValidationError {
   field: string;
   message: string;
 }
 
-// File upload type
 export interface FileUpload {
   fieldname: string;
   originalname: string;
@@ -62,12 +48,13 @@ export interface FileUpload {
   path?: string;
 }
 
-// Filter types
+// Date range filter
 export interface DateRangeFilter {
   startDate?: Date;
   endDate?: Date;
 }
 
+// Payment filter
 export interface PaymentFilter extends DateRangeFilter {
   status?: string;
   type?: string;
@@ -75,6 +62,7 @@ export interface PaymentFilter extends DateRangeFilter {
   tenantId?: string;
 }
 
+// Maintenance filter
 export interface MaintenanceFilter extends DateRangeFilter {
   status?: string;
   priority?: string;
@@ -133,6 +121,38 @@ export interface NotificationData {
   userId: string;
   relatedId?: string;
   relatedType?: string;
+}
+
+// Audit log
+export interface AuditLogData {
+  userId?: string;
+  userEmail?: string;
+  userRole?: string;
+  action: string;
+  entity: string;
+  entityId?: string;
+  oldData?: any;
+  newData?: any;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+// Email data
+export interface EmailData {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: Array<{
+    filename: string;
+    path: string;
+  }>;
+}
+
+// File service
+export interface FileServiceResult {
+  success: boolean;
+  filePath?: string;
+  error?: string;
 }
 
 // Re-export all other types
