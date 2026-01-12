@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@prisma/client": "^7.2.0",
+    "@types/node": "^20.10.0",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
@@ -54,7 +55,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "1.9",
     "@types/multer": "1.4",
-    "@types/node": "^20.19.28",
     "@types/nodemailer": "^6.4.21",
     "@types/pdfkit": "^0.13.9",
     "@types/ws": "^8.18.1",
