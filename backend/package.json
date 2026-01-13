@@ -5,25 +5,22 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "prisma generate && tsc",
+    "build": "npx prisma generate && tsc",
     "start": "node dist/server.js",
     "render-build": "npm ci --include=dev && npx prisma generate && npm run build",
-    "render-start": "npx prisma migrate deploy && npm run seed && npm start",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts",
-    "studio": "prisma studio",
+    "render-start": "npx prisma migrate deploy && npm run db:seed && npm start",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate dev",
+    "db:deploy": "npx prisma migrate deploy",
+    "db:seed": "npx prisma db seed",
+    "db:studio": "npx prisma studio",
+    "db:reset": "npx prisma migrate reset --force",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "reset-db": "prisma migrate reset --force",
-    "deploy-full": "prisma migrate deploy && npm run seed",
-    "type-check": "tsc --noEmit",
-    "db:neon:push": "prisma db push",
-    "db:neon:studio": "prisma studio",
-    "db:neon:seed": "tsx prisma/seed.ts"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^7.2.0",
@@ -79,8 +76,5 @@
     "apartment-management"
   ],
   "author": "Montez A Management",
-  "license": "MIT",
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  }
+  "license": "MIT"
 }
