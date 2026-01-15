@@ -8,6 +8,7 @@ import { config } from './config'
 import routes from './routes'
 import { errorHandler } from './middleware/error.middleware'
 import { notFoundHandler } from './middleware/not-found.middleware'
+import { corsMiddleware } from './middleware/cors.middleware' // ADD THIS
 import path from 'path'
 
 export const createApp = () => {
@@ -25,11 +26,8 @@ export const createApp = () => {
     }
   }))
 
-  // CORS
-  app.use(cors({
-    origin: config.corsOrigins,
-    credentials: true
-  }))
+  // ✅ USE YOUR CUSTOM CORS MIDDLEWARE (instead of the default one)
+  app.use(corsMiddleware)
 
   // Body parsing
   app.use(express.json({ limit: '10mb' }))
