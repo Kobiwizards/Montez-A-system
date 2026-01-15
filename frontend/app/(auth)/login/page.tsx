@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { Building2, Lock, Mail, Eye, EyeOff, Bug } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<string>('')
 
   const { login } = useAuth()
   const router = useRouter()
@@ -24,19 +25,71 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setDebugInfo('')
     setIsLoading(true)
 
     try {
+      // Debug logging
+      console.log('🔍 DEBUG LOGIN START ====================')
+      console.log('Email:', email)
+      console.log('Password:', password)
+      console.log('API URL from env:', process.env.NEXT_PUBLIC_API_URL)
+      const loginUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/login`
+      console.log('Full Login URL:', loginUrl)
+      console.log('Environment:', process.env.NODE_ENV)
+
+      // Create debug info for display
+      setDebugInfo(`
+        API URL: ${process.env.NEXT_PUBLIC_API_URL}
+        Full URL: ${loginUrl}
+        Environment: ${process.env.NODE_ENV}
+        Attempting login for: ${email}
+      `)
+
       const success = await login(email, password)
+      
       if (!success) {
         setError('Invalid credentials. Please try again.')
+        console.log('❌ Login failed via auth hook')
+        
+        // Try direct fetch to debug
+        try {
+          console.log('🔄 Attempting direct fetch...')
+          const response = await fetch(loginUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password })
+          })
+          
+          console.log('Direct fetch status:', response.status)
+          console.log('Direct fetch headers:', response.headers)
+          const data = await response.json()
+          console.log('Direct fetch response:', data)
+          
+          setDebugInfo(prev => prev + `
+            Direct Fetch Status: ${response.status}
+            Direct Fetch Response: ${JSON.stringify(data, null, 2)}
+          `)
+        } catch (fetchError) {
+          console.error('Direct fetch failed:', fetchError)
+          setDebugInfo(prev => prev + `
+            Direct Fetch Error: ${fetchError}
+          `)
+        }
+      } else {
+        console.log('✅ Login successful via auth hook')
       }
-      // Note: Successful login will redirect automatically from auth provider
     } catch (err) {
       setError('An error occurred. Please try again.')
       console.error('Login error:', err)
+      setDebugInfo(prev => prev + `
+        Error: ${err}
+      `)
     } finally {
       setIsLoading(false)
+      console.log('🔍 DEBUG LOGIN END ====================')
     }
   }
 
@@ -62,6 +115,19 @@ export default function LoginPage() {
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Debug info - only show in development or when there's an error */}
+            {(process.env.NODE_ENV === 'development' || debugInfo) && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertDescription className="text-xs font-mono whitespace-pre">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bug className="h-4 w-4" />
+                    <span className="font-semibold">Debug Info:</span>
+                  </div>
+                  {debugInfo}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -143,6 +209,13 @@ export default function LoginPage() {
                   onClick={() => {
                     setEmail('admin@monteza.com')
                     setPassword('admin123')
+                    // Auto-log debug info
+                    setDebugInfo(`
+                      Testing with admin credentials...
+                      Email: admin@monteza.com
+                      Password: admin123
+                      API URL: ${process.env.NEXT_PUBLIC_API_URL}
+                    `)
                   }}
                 >
                   Admin Demo
@@ -159,6 +232,9 @@ export default function LoginPage() {
           <a href="mailto:support@monteza.com" className="text-primary hover:underline">
             support@monteza.com
           </a>
+        </p>
+        <p className="mt-2 text-xs">
+          Backend URL: {process.env.NEXT_PUBLIC_API_URL}
         </p>
       </div>
     </div>
