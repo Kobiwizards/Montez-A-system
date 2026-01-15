@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { Building2, Lock, Mail, Eye, EyeOff, Bug } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<string>('')
 
   const { login } = useAuth()
   const router = useRouter()
@@ -23,19 +25,114 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setDebugInfo('')
     setIsLoading(true)
 
     try {
-      const success = await login(email, password)
+      // Debug logging
+      console.log('🔍 DEBUG LOGIN START ====================')
+      console.log('Email:', email)
+      console.log('Password:', password)
+      console.log('API URL from env:', process.env.NEXT_PUBLIC_API_URL)
+      const loginUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/login`
+      console.log('Full Login URL:', loginUrl)
+      console.log('Environment:', process.env.NODE_ENV)
+
+      // Create debug info for display
+      setDebugInfo(`
+        API URL: ${process.env.NEXT_PUBLIC_API_URL}
+        Full URL: ${loginUrl}
+        Environment: ${process.env.NODE_ENV}
+        Attempting login for: ${email}
+      `)
+
+      // OPTION 4 IMPLEMENTATION STARTS HERE
+      console.log('🔄 Attempting direct fetch with Option 4 fix...')
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password })
+      })
       
-      if (!success) {
-        setError('Invalid credentials. Please try again.')
+      console.log('Direct fetch status:', response.status)
+      const responseData = await response.json()
+      console.log('Full response:', responseData)
+      
+      // Check if response has the expected format
+      if (!response.ok || !responseData.success) {
+        const errorMessage = responseData.message || 'Login failed'
+        console.log('❌ Login failed:', errorMessage)
+        setError(errorMessage)
+        
+        setDebugInfo(prev => prev + `
+          Login Failed:
+          Status: ${response.status}
+          Message: ${errorMessage}
+          Response: ${JSON.stringify(responseData, null, 2)}
+        `)
+        return
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.')
+      
+      // ✅ SUCCESS - Extract data from backend format
+      // Backend returns: { success: true, message: '...', data: { user, accessToken, refreshToken } }
+      const { user, accessToken, refreshToken } = responseData.data
+      
+      if (!user || !accessToken) {
+        console.error('❌ Invalid response format - missing user or token')
+        setError('Invalid server response format')
+        setDebugInfo(prev => prev + `
+          Invalid Response Format:
+          User exists: ${!!user}
+          AccessToken exists: ${!!accessToken}
+          Full data: ${JSON.stringify(responseData.data, null, 2)}
+        `)
+        return
+      }
+      
+      console.log('✅ Login successful!')
+      console.log('User:', user.email)
+      console.log('Token (first 20 chars):', accessToken.substring(0, 20) + '...')
+      console.log('User role:', user.role)
+      
+      // Save to localStorage
+      localStorage.setItem('token', accessToken)
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
+      }
+      localStorage.setItem('user', JSON.stringify(user))
+      
+      // Update debug info
+      setDebugInfo(prev => prev + `
+        ✅ LOGIN SUCCESSFUL!
+        User: ${user.email}
+        Role: ${user.role}
+        Token saved: ${accessToken.substring(0, 20)}...
+        Redirecting to dashboard...
+      `)
+      
+      // Redirect based on role
+      // Using window.location.href instead of router.push to ensure full page reload
+      // This will properly initialize the auth context
+      if (user.role === 'ADMIN') {
+        console.log('Redirecting to admin dashboard...')
+        window.location.href = '/admin/dashboard'
+      } else {
+        console.log('Redirecting to tenant dashboard...')
+        window.location.href = '/tenant/dashboard'
+      }
+      
+    } catch (err: any) {
       console.error('Login error:', err)
+      setError(err.message || 'An error occurred. Please try again.')
+      setDebugInfo(prev => prev + `
+        Error: ${err.message}
+        Stack: ${err.stack}
+      `)
     } finally {
       setIsLoading(false)
+      console.log('🔍 DEBUG LOGIN END ====================')
     }
   }
 
@@ -61,6 +158,19 @@ export default function LoginPage() {
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Debug info - only show in development or when there's an error */}
+            {(process.env.NODE_ENV === 'development' || debugInfo) && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertDescription className="text-xs font-mono whitespace-pre">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bug className="h-4 w-4" />
+                    <span className="font-semibold">Debug Info:</span>
+                  </div>
+                  {debugInfo}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -131,6 +241,12 @@ export default function LoginPage() {
                   onClick={() => {
                     setEmail('john.kamau@monteza.com')
                     setPassword('password123')
+                    setDebugInfo(`
+                      Testing with tenant credentials...
+                      Email: john.kamau@monteza.com
+                      Password: password123
+                      API URL: ${process.env.NEXT_PUBLIC_API_URL}
+                    `)
                   }}
                 >
                   Tenant Demo
@@ -142,6 +258,13 @@ export default function LoginPage() {
                   onClick={() => {
                     setEmail('admin@monteza.com')
                     setPassword('admin123')
+                    // Auto-log debug info
+                    setDebugInfo(`
+                      Testing with admin credentials...
+                      Email: admin@monteza.com
+                      Password: admin123
+                      API URL: ${process.env.NEXT_PUBLIC_API_URL}
+                    `)
                   }}
                 >
                   Admin Demo
