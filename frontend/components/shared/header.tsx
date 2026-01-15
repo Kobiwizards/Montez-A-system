@@ -29,10 +29,12 @@ export function Header() {
     { href: '/admin/payments', label: 'Payments' },
     { href: '/admin/analytics', label: 'Analytics' },
     { href: '/admin/water-bills', label: 'Water Bills' },
+    { href: '/admin/notifications', label: 'Notifications' },
   ] : [
     { href: '/tenant/dashboard', label: 'Dashboard', icon: Home },
     { href: '/tenant/payments', label: 'Payments' },
     { href: '/tenant/receipts', label: 'Receipts' },
+    { href: '/tenant/notifications', label: 'Notifications' },
     { href: '/tenant/profile', label: 'Profile' },
   ]
 
@@ -93,10 +95,13 @@ export function Header() {
               />
             </div>
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-2 w-2 bg-error rounded-full" />
-            </Button>
+            {/* FIXED NOTIFICATION BUTTON - Now wrapped with Link */}
+            <Link href={isAdmin ? '/admin/notifications' : '/tenant/notifications'}>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 bg-error rounded-full" />
+              </Button>
+            </Link>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
