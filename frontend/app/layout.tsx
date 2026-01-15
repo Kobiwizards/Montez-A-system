@@ -1,4 +1,4 @@
-'use client' // ADD THIS LINE AT THE TOP
+'use client'
 
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
@@ -17,7 +17,12 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono',
 })
 
-// REMOVE the metadata export since it's now a client component
+// Since this is a client component, you can't export metadata
+// Define it as a constant instead
+const metadata = {
+  title: 'Montez A Property Management',
+  description: 'Property management system for Montez A apartments',
+}
 
 export default function RootLayout({
   children,
@@ -26,6 +31,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <title>{metadata.title}</title>
+        <meta name="description" content={metadata.description} />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider
           attribute="class"

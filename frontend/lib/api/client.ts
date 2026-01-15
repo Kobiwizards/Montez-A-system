@@ -32,7 +32,7 @@ class ApiClient {
       }
     )
 
-    // Response interceptor
+    // Response interceptor - FIXED refresh token URL
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
@@ -45,16 +45,26 @@ class ApiClient {
           try {
             const refreshToken = localStorage.getItem('refreshToken')
             if (refreshToken) {
+              // ✅ FIXED: Backend uses '/auth/refresh-token' not '/auth/refresh'
               const response = await axios.post(`${this.baseURL}/auth/refresh-token`, {
                 refreshToken,
               })
               
-              const { token: newToken, refreshToken: newRefreshToken } = response.data
-              this.setToken(newToken)
-              localStorage.setItem('refreshToken', newRefreshToken)
+              console.log('Refresh token response:', response.data)
               
-              originalRequest.headers.Authorization = `Bearer ${newToken}`
-              return this.client(originalRequest)
+              // ✅ Handle backend response format: { success: true, data: { token, refreshToken } }
+              if (response.data.success) {
+                const { token: newToken, refreshToken: newRefreshToken } = response.data.data
+                
+                if (newToken) {
+                  this.setToken(newToken)
+                  localStorage.setItem('refreshToken', newRefreshToken)
+                  
+                  // Update the failed request with new token
+                  originalRequest.headers.Authorization = `Bearer ${newToken}`
+                  return this.client(originalRequest)
+                }
+              }
             }
           } catch (refreshError) {
             console.error('Token refresh failed:', refreshError)
@@ -89,19 +99,59 @@ class ApiClient {
     }
   }
 
-  // Generic request method
+  // Generic request method - UPDATED to handle backend response format
   async request<T>(config: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await this.client.request<T>(config)
-      return response.data
+      const response = await this.client.request<any>(config)
+      
+      console.log('API Request completed:', {
+        url: config.url,
+        method: config.method,
+        status: response.status,
+        data: response.data
+      })
+      
+      // Handle the { success, message, data } format from your backend
+      if (response.data && typeof response.data === 'object') {
+        // If response has success field and it's false, throw error
+        if (response.data.success === false) {
+          const errorMessage = response.data.message || 'Request failed'
+          console.error('API request failed with success=false:', errorMessage)
+          throw new Error(errorMessage)
+        }
+        
+        // If response has data field, return it directly
+        // This transforms { success: true, message: "...", data: {...} } to just {...}
+        if (response.data.data !== undefined) {
+          return response.data.data as T
+        }
+      }
+      
+      // Otherwise return the full response
+      return response.data as T
     } catch (error: any) {
       console.error('API request failed:', error)
       console.error('Request URL:', config.url)
       console.error('Base URL:', this.baseURL)
-      throw error.response?.data || {
-        success: false,
-        message: 'Network error. Please check your connection.',
+      console.error('Error response:', error.response?.data)
+      
+      // If it's already an Error object with message, re-throw it
+      if (error instanceof Error) {
+        throw error
       }
+      
+      // Handle error response format from backend
+      if (error.response?.data) {
+        const errorData = error.response.data
+        if (errorData.message) {
+          throw new Error(errorData.message)
+        }
+        if (errorData.success === false && errorData.message) {
+          throw new Error(errorData.message)
+        }
+      }
+      
+      throw new Error('Network error. Please check your connection.')
     }
   }
 

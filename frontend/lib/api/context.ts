@@ -1,10 +1,11 @@
 "use client"
 
 import React, { createContext, useContext, ReactNode } from 'react'
+import { authApi } from './auth'  // Import the real authApi
 
 interface ApiContextValue {
   auth: {
-    login: (credentials: any) => Promise<any>
+    login: (credentials: { email: string; password: string }) => Promise<any>
     logout: () => Promise<any>
     register: (userData: any) => Promise<any>
     forgotPassword: (email: string) => Promise<any>
@@ -30,15 +31,16 @@ interface ApiProviderProps {
 }
 
 export function ApiProvider({ children }: ApiProviderProps) {
+  // Use the real authApi functions
   const value: ApiContextValue = {
     auth: {
-      login: async () => ({ success: true, data: null }),
-      logout: async () => ({ success: true }),
-      register: async () => ({ success: true, data: null }),
-      forgotPassword: async () => ({ success: true }),
-      resetPassword: async () => ({ success: true }),
-      verifyEmail: async () => ({ success: true }),
-      refreshToken: async () => ({ success: true, data: null }),
+      login: authApi.login,
+      logout: authApi.logout,
+      register: authApi.register,
+      forgotPassword: authApi.forgotPassword,
+      resetPassword: authApi.resetPassword,
+      verifyEmail: authApi.verifyEmail,
+      refreshToken: authApi.refreshToken,
     }
   }
 

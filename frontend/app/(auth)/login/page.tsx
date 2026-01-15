@@ -46,46 +46,89 @@ export default function LoginPage() {
         Attempting login for: ${email}
       `)
 
-      const success = await login(email, password)
+      // OPTION 4 IMPLEMENTATION STARTS HERE
+      console.log('🔄 Attempting direct fetch with Option 4 fix...')
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password })
+      })
       
-      if (!success) {
-        setError('Invalid credentials. Please try again.')
-        console.log('❌ Login failed via auth hook')
+      console.log('Direct fetch status:', response.status)
+      const responseData = await response.json()
+      console.log('Full response:', responseData)
+      
+      // Check if response has the expected format
+      if (!response.ok || !responseData.success) {
+        const errorMessage = responseData.message || 'Login failed'
+        console.log('❌ Login failed:', errorMessage)
+        setError(errorMessage)
         
-        // Try direct fetch to debug
-        try {
-          console.log('🔄 Attempting direct fetch...')
-          const response = await fetch(loginUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password })
-          })
-          
-          console.log('Direct fetch status:', response.status)
-          console.log('Direct fetch headers:', response.headers)
-          const data = await response.json()
-          console.log('Direct fetch response:', data)
-          
-          setDebugInfo(prev => prev + `
-            Direct Fetch Status: ${response.status}
-            Direct Fetch Response: ${JSON.stringify(data, null, 2)}
-          `)
-        } catch (fetchError) {
-          console.error('Direct fetch failed:', fetchError)
-          setDebugInfo(prev => prev + `
-            Direct Fetch Error: ${fetchError}
-          `)
-        }
-      } else {
-        console.log('✅ Login successful via auth hook')
+        setDebugInfo(prev => prev + `
+          Login Failed:
+          Status: ${response.status}
+          Message: ${errorMessage}
+          Response: ${JSON.stringify(responseData, null, 2)}
+        `)
+        return
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.')
-      console.error('Login error:', err)
+      
+      // ✅ SUCCESS - Extract data from backend format
+      // Backend returns: { success: true, message: '...', data: { user, accessToken, refreshToken } }
+      const { user, accessToken, refreshToken } = responseData.data
+      
+      if (!user || !accessToken) {
+        console.error('❌ Invalid response format - missing user or token')
+        setError('Invalid server response format')
+        setDebugInfo(prev => prev + `
+          Invalid Response Format:
+          User exists: ${!!user}
+          AccessToken exists: ${!!accessToken}
+          Full data: ${JSON.stringify(responseData.data, null, 2)}
+        `)
+        return
+      }
+      
+      console.log('✅ Login successful!')
+      console.log('User:', user.email)
+      console.log('Token (first 20 chars):', accessToken.substring(0, 20) + '...')
+      console.log('User role:', user.role)
+      
+      // Save to localStorage
+      localStorage.setItem('token', accessToken)
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
+      }
+      localStorage.setItem('user', JSON.stringify(user))
+      
+      // Update debug info
       setDebugInfo(prev => prev + `
-        Error: ${err}
+        ✅ LOGIN SUCCESSFUL!
+        User: ${user.email}
+        Role: ${user.role}
+        Token saved: ${accessToken.substring(0, 20)}...
+        Redirecting to dashboard...
+      `)
+      
+      // Redirect based on role
+      // Using window.location.href instead of router.push to ensure full page reload
+      // This will properly initialize the auth context
+      if (user.role === 'ADMIN') {
+        console.log('Redirecting to admin dashboard...')
+        window.location.href = '/admin/dashboard'
+      } else {
+        console.log('Redirecting to tenant dashboard...')
+        window.location.href = '/tenant/dashboard'
+      }
+      
+    } catch (err: any) {
+      console.error('Login error:', err)
+      setError(err.message || 'An error occurred. Please try again.')
+      setDebugInfo(prev => prev + `
+        Error: ${err.message}
+        Stack: ${err.stack}
       `)
     } finally {
       setIsLoading(false)
@@ -198,6 +241,12 @@ export default function LoginPage() {
                   onClick={() => {
                     setEmail('john.kamau@monteza.com')
                     setPassword('password123')
+                    setDebugInfo(`
+                      Testing with tenant credentials...
+                      Email: john.kamau@monteza.com
+                      Password: password123
+                      API URL: ${process.env.NEXT_PUBLIC_API_URL}
+                    `)
                   }}
                 >
                   Tenant Demo
