@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/components/shared/auth-provider'
 
@@ -95,6 +94,13 @@ export default function NotificationsPage() {
   }
 
   const unreadCount = notifications.filter(n => !n.read).length
+
+  const toggleSetting = (key: string) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [key]: !prev[key as keyof typeof prev]
+    }))
+  }
 
   return (
     <div className="min-h-screen bg-gradient-dark">
@@ -249,13 +255,19 @@ export default function NotificationsPage() {
                            'Water reading reminders'}
                         </p>
                       </div>
-                      <Switch
+                      <button
                         id={key}
-                        checked={value}
-                        onCheckedChange={(checked) => 
-                          setNotificationSettings(prev => ({ ...prev, [key]: checked }))
-                        }
-                      />
+                        onClick={() => toggleSetting(key)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          value ? 'bg-primary' : 'bg-secondary-700'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            value ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
                     </div>
                   ))}
                 </div>
