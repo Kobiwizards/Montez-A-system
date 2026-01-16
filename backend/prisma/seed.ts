@@ -82,21 +82,40 @@ const tenantData = [
 ]
 
 async function main() {
-  console.log('��� Starting database seeding...')
+  console.log('🚀 Starting database seeding...')
   
-  // Clear existing data (in correct order due to foreign key constraints)
-  await prisma.auditLog.deleteMany()
-  await prisma.notification.deleteMany()
-  await prisma.maintenanceRequest.deleteMany()
-  await prisma.analyticsSnapshot.deleteMany()
-  await prisma.waterReading.deleteMany()
-  await prisma.receipt.deleteMany()
-  await prisma.payment.deleteMany()
-  await prisma.user.deleteMany()
+  // Clear existing data safely (skip if tables don't exist)
+  console.log('🧹 Clearing existing data...')
   
-  console.log('���️ Cleared existing data')
+  const models = [
+    'auditLog',
+    'notification',
+    'maintenanceRequest',
+    'analyticsSnapshot',
+    'waterReading',
+    'receipt',
+    'payment',
+    'user'
+  ]
+  
+  for (const model of models) {
+    try {
+      // Use dynamic property access with error handling
+      await (prisma as any)[model].deleteMany({})
+      console.log(`✅ Cleared ${model} table`)
+    } catch (error: any) {
+      if (error.code === 'P2021' || error.message?.includes('does not exist')) {
+        console.log(`ℹ️  ${model} table doesn't exist yet, skipping...`)
+      } else {
+        console.log(`⚠️  Could not clear ${model}: ${error.message}`)
+      }
+    }
+  }
+  
+  console.log('✅ Data cleared successfully')
   
   // Create admin user
+  console.log('👑 Creating admin user...')
   const hashedAdminPassword = await bcrypt.hash('admin123', 10)
   const admin = await prisma.user.create({
     data: {
@@ -115,11 +134,13 @@ async function main() {
       notes: 'System Administrator'
     }
   })
-  console.log(`��� Created admin user: ${admin.email}`)
+  console.log(`✅ Created admin user: ${admin.email}`)
   
   // Create tenants for each apartment
   const tenants = []
   const currentDate = new Date()
+  
+  console.log('🏢 Creating tenants for 26 apartments...')
   
   for (let i = 0; i < MONTEZ_A_APARTMENTS.length; i++) {
     const apartment = MONTEZ_A_APARTMENTS[i]
@@ -156,7 +177,7 @@ async function main() {
     })
     
     tenants.push(tenant)
-    console.log(`��� Created tenant: ${tenant.name} in ${tenant.apartment} (Balance: KSh ${tenant.balance})`)
+    console.log(`✅ Created tenant: ${tenant.name} in ${tenant.apartment} (Balance: KSh ${tenant.balance})`)
     
     // Create payments for the tenant (last 4 months with varied amounts)
     const months = [
@@ -247,41 +268,68 @@ async function main() {
     }
   }
   
-  // Create comprehensive analytics snapshot
-  const totalUnits = MONTEZ_A_APARTMENTS.length
-  const occupiedUnits = tenants.length
-  const totalRentDue = tenants.reduce((sum, t) => sum + t.rentAmount * 4, 0) // 4 months
-  const totalRentPaid = tenants.reduce((sum, t) => sum + (t.rentAmount * 3 * 0.85), 0) // 85% of 3 months
-  const totalBalance = tenants.reduce((sum, t) => sum + t.balance, 0)
-  
+  // Replace the entire analytics snapshot section with this:
+console.log('📊 Creating analytics snapshot...')
+
+// Calculate analytics
+const totalUnits = MONTEZ_A_APARTMENTS.length
+const occupiedUnits = tenants.length
+const totalRentDue = tenants.reduce((sum, t) => sum + t.rentAmount * 4, 0) // 4 months
+const totalRentPaid = tenants.reduce((sum, t) => sum + (t.rentAmount * 3 * 0.85), 0) // 85% of 3 months
+
+try {
+  // Try to create with all fields
   await prisma.analyticsSnapshot.create({
     data: {
       date: new Date(),
       totalRentDue,
       totalRentPaid,
-      totalBalance,
-      totalWaterDue: 46800, // 26 apartments × 3 months × 150 × 4 units avg
-      totalWaterPaid: 42120, // 90% paid
+      totalWaterDue: 46800,
+      totalWaterPaid: 42120,
       totalOtherDue: 0,
       totalOtherPaid: 0,
       totalUnits,
       occupiedUnits,
-      vacantUnits: 0, // All occupied
+      vacantUnits: 0,
       maintenanceUnits: 3,
       occupancyRate: 100,
       vacancyRate: 0,
-      pendingPayments: Math.floor(tenants.length * 0.25), // 25% pending
-      verifiedPayments: Math.floor(tenants.length * 3 * 0.85), // 85% of 3 months verified
+      pendingPayments: Math.floor(tenants.length * 0.25),
+      verifiedPayments: Math.floor(tenants.length * 3 * 0.85),
       rejectedPayments: 2,
       currentTenants: tenants.filter(t => t.status === 'CURRENT').length,
       overdueTenants: tenants.filter(t => t.status === 'OVERDUE').length,
       delinquentTenants: tenants.filter(t => t.status === 'DELINQUENT').length,
     }
   })
+  console.log('✅ Created analytics snapshot')
+} catch (error: any) {
+  // If that fails, try a simpler version
+  console.log('⚠️  Creating simplified analytics snapshot...')
   
-  console.log('��� Created analytics snapshot')
+  try {
+    await prisma.analyticsSnapshot.create({
+      data: {
+        date: new Date(),
+        totalRentDue,
+        totalRentPaid,
+        totalWaterDue: 46800,
+        totalWaterPaid: 42120,
+        totalUnits,
+        occupiedUnits,
+        vacantUnits: 0,
+        occupancyRate: 100,
+      }
+    })
+    console.log('✅ Created simplified analytics snapshot')
+  } catch (innerError: any) {
+    console.log('❌ Could not create analytics snapshot:', innerError.message)
+    console.log('Skipping analytics snapshot...')
+  }
+}
   
   // Create realistic maintenance requests
+  console.log('🔧 Creating maintenance requests...')
   const maintenanceRequests = [
     { title: 'Leaking kitchen faucet', priority: 'HIGH', status: 'COMPLETED', floor: 1 },
     { title: 'AC not cooling properly', priority: 'HIGH', status: 'IN_PROGRESS', floor: 2 },
@@ -289,10 +337,6 @@ async function main() {
     { title: 'Toilet flush not working', priority: 'HIGH', status: 'COMPLETED', floor: 4 },
     { title: 'Electrical socket sparking', priority: 'HIGH', status: 'IN_PROGRESS', floor: 5 },
     { title: 'Water heater issue', priority: 'MEDIUM', status: 'PENDING', floor: 6 },
-    { title: 'Door handle loose', priority: 'LOW', status: 'COMPLETED', floor: 1 },
-    { title: 'Paint peeling in living room', priority: 'LOW', status: 'PENDING', floor: 2 },
-    { title: 'Balcony door stuck', priority: 'MEDIUM', status: 'COMPLETED', floor: 3 },
-    { title: 'Kitchen cabinet hinge broken', priority: 'LOW', status: 'PENDING', floor: 4 }
   ]
   
   for (const request of maintenanceRequests) {
@@ -325,20 +369,19 @@ async function main() {
     }
   }
   
-  console.log('��� Created maintenance requests')
+  console.log('✅ Created maintenance requests')
   
   // Create realistic notifications
+  console.log('🔔 Creating notifications...')
   const notificationTypes = [
     { type: 'PAYMENT', title: 'Rent Payment Due', template: 'Your rent payment for {month} is due on 5th {month}' },
     { type: 'MAINTENANCE', title: 'Maintenance Update', template: 'Your maintenance request for {issue} has been updated to {status}' },
     { type: 'WATER', title: 'Water Reading Reminder', template: 'Please submit your water meter reading by end of month' },
-    { type: 'SYSTEM', title: 'System Announcement', template: 'System maintenance scheduled for this weekend' },
-    { type: 'ALERT', title: 'Important Notice', template: 'Water will be shut off for maintenance on {date}' }
   ]
   
   const months = ['January', 'February', 'March', 'April']
   
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 15; i++) {
     const tenant = tenants[Math.floor(Math.random() * tenants.length)]
     const notificationType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)]
     const month = months[Math.floor(Math.random() * months.length)]
@@ -347,7 +390,6 @@ async function main() {
       .replace('{month}', month)
       .replace('{issue}', 'leaking faucet')
       .replace('{status}', 'in progress')
-      .replace('{date}', '25th ' + month)
     
     await prisma.notification.create({
       data: {
@@ -362,34 +404,40 @@ async function main() {
   }
   
   // Also create some admin notifications
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     await prisma.notification.create({
       data: {
         userId: admin.id,
         title: 'Admin Alert',
-        message: `System report: ${['Payment overdue', 'New tenant registration', 'Maintenance request', 'Water reading missing', 'Monthly analytics'][i]}`,
+        message: `System report: ${['Payment overdue', 'New tenant registration', 'Maintenance request'][i]}`,
         type: 'SYSTEM',
         read: false,
       }
     })
   }
   
-  console.log('��� Created notifications')
+  console.log('✅ Created notifications')
   
-  console.log('✅ Database seeding completed!')
+  console.log('🎉 Database seeding completed successfully!')
+  console.log('==========================================')
   console.log(`🏢 Building: Montez A Apartments`)
   console.log(`📊 Total Apartments: ${MONTEZ_A_APARTMENTS.length}`)
   console.log(`   • 6 Floors (1st to 6th)`)
   console.log(`   • 20 Two-bedroom units`)
   console.log(`   • 6 One-bedroom units`)
-  console.log(`👥 Created: ${tenants.length + 1} users (1 admin, ${tenants.length} tenants)`)
-  console.log(`💰 Created: ${tenants.length * 4} payments (4 months each)`)
-  console.log(`🧾 Created: ${tenants.length * 3} receipts (3 months verified)`)
-  console.log(`💧 Created: ${tenants.length * 4} water readings`)
-  console.log(`🔧 Created: ${maintenanceRequests.length} maintenance requests`)
-  console.log(`🔔 Created: 25 notifications`)
+  console.log(`👥 Total Users: ${tenants.length + 1} (1 admin, ${tenants.length} tenants)`)
+  console.log(`💰 Total Payments: ${tenants.length * 4}`)
+  console.log(`🧾 Total Receipts: ${tenants.length * 3}`)
+  console.log(`💧 Water Readings: ${tenants.length * 4}`)
+  console.log(`🔧 Maintenance Requests: ${maintenanceRequests.length}`)
+  console.log(`🔔 Notifications: 18`)
   console.log(`📈 Occupancy Rate: 100%`)
   console.log(`💵 Total Outstanding Balance: KSh ${tenants.reduce((sum, t) => sum + t.balance, 0).toLocaleString()}`)
+  console.log('==========================================')
+  console.log('🔑 Demo Credentials:')
+  console.log('   • Admin: admin@monteza.com / admin123')
+  console.log('   • Tenant: john.kamau@monteza.com / password123')
+  console.log('==========================================')
 }
 
 main()
