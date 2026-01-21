@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { TenantTable } from '@/components/admin/tenant-table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/lib/hooks/use-toast'
 import { useAuth } from '@/components/shared/auth-provider'
 import Link from 'next/link'
+import { tenantApi } from '@/lib/api/tenant' // IMPORT API
+import { paymentApi } from '@/lib/api/payment' // IMPORT PAYMENT API
 
 interface Tenant {
   id: string
@@ -24,7 +25,7 @@ interface Tenant {
   unitType: 'ONE_BEDROOM' | 'TWO_BEDROOM'
   rentAmount: number
   balance: number
-  status: 'CURRENT' | 'OVERDUE' | 'DELINQUENT'
+  status: 'CURRENT' | 'OVERDUE' | 'DELINQUENT' | 'EVICTED' | 'FORMER'
   moveInDate: string
 }
 
@@ -43,51 +44,34 @@ export default function TenantsPage() {
   const fetchTenants = async () => {
     try {
       setLoading(true)
-      // Mock data - replace with API call
-      const mockTenants: Tenant[] = [
-        {
-          id: '1',
-          name: 'John Kamau',
-          email: 'john.kamau@monteza.com',
-          phone: '254712345678',
-          apartment: '1A1',
-          unitType: 'TWO_BEDROOM',
-          rentAmount: 18000,
-          balance: 0,
-          status: 'CURRENT',
-          moveInDate: '2023-01-15',
-        },
-        {
-          id: '2',
-          name: 'Mary Wanjiku',
-          email: 'mary.wanjiku@monteza.com',
-          phone: '254723456789',
-          apartment: '1B1',
-          unitType: 'ONE_BEDROOM',
-          rentAmount: 15000,
-          balance: 5000,
-          status: 'OVERDUE',
-          moveInDate: '2023-02-01',
-        },
-        {
-          id: '3',
-          name: 'Peter Kariuki',
-          email: 'peter.kariuki@monteza.com',
-          phone: '254734567890',
-          apartment: '2A1',
-          unitType: 'TWO_BEDROOM',
-          rentAmount: 18000,
-          balance: 18000,
-          status: 'DELINQUENT',
-          moveInDate: '2023-03-15',
-        },
-        // Add more mock tenants...
-      ]
-      setTenants(mockTenants)
-    } catch (error) {
+      console.log('🔄 Fetching tenants from API...')
+      
+      // REAL API CALL - Fetches ALL tenants from database
+      const response = await tenantApi.getAllTenants({ limit: 100 })
+      
+      console.log('📊 API Response:', {
+        success: response.success,
+        totalTenants: response.pagination?.total,
+        fetchedTenants: response.data?.length,
+        firstFew: response.data?.slice(0, 3).map(t => `${t.name} (${t.apartment})`)
+      })
+      
+      if (response.success && Array.isArray(response.data)) {
+        setTenants(response.data)
+        console.log(`✅ Successfully loaded ${response.data.length} tenants`)
+      } else {
+        console.error('❌ Invalid response:', response)
+        toast({
+          title: 'Error',
+          description: 'Invalid response from server',
+          variant: 'destructive',
+        })
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching tenants:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load tenants',
+        description: error.message || 'Failed to load tenants',
         variant: 'destructive',
       })
     } finally {
@@ -110,11 +94,11 @@ export default function TenantsPage() {
   const getStatusBadge = (status: Tenant['status']) => {
     switch (status) {
       case 'CURRENT':
-        return <Badge variant="success">Current</Badge>
+        return <Badge className="bg-green-500 hover:bg-green-600">Current</Badge>
       case 'OVERDUE':
-        return <Badge variant="warning">Overdue</Badge>
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Overdue</Badge>
       case 'DELINQUENT':
-        return <Badge variant="error">Delinquent</Badge>
+        return <Badge className="bg-red-500 hover:bg-red-600">Delinquent</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -128,27 +112,59 @@ export default function TenantsPage() {
     if (!confirm('Are you sure you want to delete this tenant?')) return
 
     try {
-      // API call to delete tenant
+      // REAL API CALL to delete tenant
+      await tenantApi.deleteTenant(id)
       toast({
         title: 'Success',
         description: 'Tenant deleted successfully',
       })
-      fetchTenants()
-    } catch (error) {
+      fetchTenants() // Refresh the list
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to delete tenant',
+        description: error.message || 'Failed to delete tenant',
         variant: 'destructive',
       })
     }
   }
 
-  const stats = {
-    total: tenants.length,
-    current: tenants.filter(t => t.status === 'CURRENT').length,
-    overdue: tenants.filter(t => t.status === 'OVERDUE').length,
-    delinquent: tenants.filter(t => t.status === 'DELINQUENT').length,
-    totalOutstanding: tenants.reduce((sum, t) => sum + t.balance, 0),
+  // Fetch additional stats from API
+  const [stats, setStats] = useState({
+    total: 0,
+    current: 0,
+    overdue: 0,
+    delinquent: 0,
+    totalOutstanding: 0,
+    pendingPayments: 0,
+    verifiedPayments: 0
+  })
+
+  useEffect(() => {
+    if (tenants.length > 0) {
+      const current = tenants.filter(t => t.status === 'CURRENT').length
+      const overdue = tenants.filter(t => t.status === 'OVERDUE').length
+      const delinquent = tenants.filter(t => t.status === 'DELINQUENT').length
+      const totalOutstanding = tenants.reduce((sum, t) => sum + t.balance, 0)
+      
+      setStats({
+        total: tenants.length,
+        current,
+        overdue,
+        delinquent,
+        totalOutstanding,
+        pendingPayments: 0, // You can fetch this from paymentApi.getPendingPayments()
+        verifiedPayments: 0
+      })
+    }
+  }, [tenants])
+
+  // Quick refresh button
+  const handleRefresh = () => {
+    fetchTenants()
+    toast({
+      title: 'Refreshing',
+      description: 'Fetching latest tenant data...',
+    })
   }
 
   return (
@@ -164,15 +180,24 @@ export default function TenantsPage() {
             <div>
               <h1 className="text-3xl font-bold mb-2">Tenant Management</h1>
               <p className="text-muted-foreground">
-                Manage all tenants and their apartments
+                Managing {stats.total} tenants across Montez A Apartments
               </p>
             </div>
-            <Link href="/admin/tenants/new">
-              <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Add New Tenant
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Refresh Data'}
               </Button>
-            </Link>
+              <Link href="/admin/tenants/new">
+                <Button className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Add New Tenant
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -196,10 +221,10 @@ export default function TenantsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Current</p>
-                    <p className="text-3xl font-bold text-success">{stats.current}</p>
+                    <p className="text-3xl font-bold text-green-600">{stats.current}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-lg bg-success/10 flex items-center justify-center">
-                    <Badge variant="success" className="h-6 w-6 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                    <Badge className="bg-green-500 h-6 w-6 flex items-center justify-center">
                       ✓
                     </Badge>
                   </div>
@@ -212,10 +237,10 @@ export default function TenantsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Overdue</p>
-                    <p className="text-3xl font-bold text-warning">{stats.overdue}</p>
+                    <p className="text-3xl font-bold text-yellow-600">{stats.overdue}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-lg bg-warning/10 flex items-center justify-center">
-                    <Badge variant="warning" className="h-6 w-6 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
+                    <Badge className="bg-yellow-500 h-6 w-6 flex items-center justify-center">
                       !
                     </Badge>
                   </div>
@@ -228,10 +253,12 @@ export default function TenantsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Outstanding</p>
-                    <p className="text-3xl font-bold">KSh {stats.totalOutstanding.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-red-600">
+                      KSh {stats.totalOutstanding.toLocaleString()}
+                    </p>
                   </div>
-                  <div className="w-12 h-12 rounded-lg bg-error/10 flex items-center justify-center">
-                    <Badge variant="error" className="h-6 w-6 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                    <Badge className="bg-red-500 h-6 w-6 flex items-center justify-center">
                       $
                     </Badge>
                   </div>
@@ -239,6 +266,18 @@ export default function TenantsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Debug Info Banner */}
+          {tenants.length > 0 && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <span className="font-medium">Debug Info:</span>
+                <span>Loaded {tenants.length} tenants from database.</span>
+                <span>First tenant: {tenants[0]?.name}</span>
+                <span>Last tenant: {tenants[tenants.length - 1]?.name}</span>
+              </div>
+            </div>
+          )}
 
           {/* Filters and Search */}
           <Card className="mb-6">
@@ -262,10 +301,10 @@ export default function TenantsPage() {
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="CURRENT">Current</SelectItem>
-                      <SelectItem value="OVERDUE">Overdue</SelectItem>
-                      <SelectItem value="DELINQUENT">Delinquent</SelectItem>
+                      <SelectItem value="all">All Status ({tenants.length})</SelectItem>
+                      <SelectItem value="CURRENT">Current ({stats.current})</SelectItem>
+                      <SelectItem value="OVERDUE">Overdue ({stats.overdue})</SelectItem>
+                      <SelectItem value="DELINQUENT">Delinquent ({stats.delinquent})</SelectItem>
                     </SelectContent>
                   </Select>
                   
@@ -283,14 +322,22 @@ export default function TenantsPage() {
               <CardTitle>Tenant List</CardTitle>
               <CardDescription>
                 Showing {filteredTenants.length} of {tenants.length} tenants
+                {loading && ' • Loading...'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
-                    <div className="spinner h-8 w-8 mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading tenants...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading tenants from database...</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={fetchTenants}
+                    >
+                      Retry
+                    </Button>
                   </div>
                 </div>
               ) : filteredTenants.length === 0 ? (
@@ -302,14 +349,19 @@ export default function TenantsPage() {
                   <p className="text-muted-foreground mb-6">
                     {search || statusFilter !== 'all' 
                       ? 'Try adjusting your search or filters' 
-                      : 'No tenants have been added yet'}
+                      : 'No tenants in the database yet'}
                   </p>
-                  <Link href="/admin/tenants/new">
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add First Tenant
+                  <div className="flex gap-3 justify-center">
+                    <Button onClick={fetchTenants} variant="outline">
+                      Reload from Database
                     </Button>
-                  </Link>
+                    <Link href="/admin/tenants/new">
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Tenant
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -328,7 +380,7 @@ export default function TenantsPage() {
                     </TableHeader>
                     <TableBody>
                       {filteredTenants.map((tenant) => (
-                        <TableRow key={tenant.id} className="hover:bg-secondary-800/50">
+                        <TableRow key={tenant.id} className="hover:bg-gray-50">
                           <TableCell>
                             <div>
                               <p className="font-medium">{tenant.name}</p>
@@ -344,7 +396,7 @@ export default function TenantsPage() {
                             KSh {tenant.rentAmount.toLocaleString()}
                           </TableCell>
                           <TableCell>
-                            <span className={tenant.balance > 0 ? 'text-error' : 'text-success'}>
+                            <span className={tenant.balance > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
                               KSh {tenant.balance.toLocaleString()}
                             </span>
                           </TableCell>
@@ -368,7 +420,7 @@ export default function TenantsPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleDeleteTenant(tenant.id)}
-                                className="text-error hover:text-error"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -378,6 +430,15 @@ export default function TenantsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  
+                  {/* Pagination or Load More */}
+                  {tenants.length > 50 && (
+                    <div className="mt-4 text-center">
+                      <Button variant="outline">
+                        Load More Tenants
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

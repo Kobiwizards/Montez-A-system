@@ -21,34 +21,6 @@ export interface Tenant {
   updatedAt: string
 }
 
-export interface TenantDashboard {
-  currentBalance: number
-  totalPaid: number
-  totalDue: number
-  nextPaymentDate?: string
-  recentPayments: Array<{
-    id: string
-    month: string
-    amount: number
-    status: string
-    date: string
-  }>
-  upcomingPayments: Array<{
-    id: string
-    dueDate: string
-    amount: number
-    type: string
-  }>
-  quickStats: {
-    rentAmount: number
-    waterBill: number
-    daysInApartment: number
-    lastPaymentDate?: string
-    paymentsThisMonth: number
-    pendingPayments: number
-  }
-}
-
 export interface PaginatedResponse<T> {
   success: boolean
   data: T[]
@@ -61,17 +33,7 @@ export interface PaginatedResponse<T> {
 }
 
 class TenantAPI {
-  // Get tenant dashboard data
-  async getDashboard(): Promise<{ success: boolean; data: TenantDashboard }> {
-    return api.get('/tenants/dashboard/me')
-  }
-
-  // Get tenant by ID (admin)
-  async getTenantById(id: string): Promise<{ success: boolean; data: Tenant }> {
-    return api.get(`/tenants/${id}`)
-  }
-
-  // Get all tenants (admin)
+  // Get all tenants (admin) - UPDATED: Default limit 100
   async getAllTenants(params?: {
     page?: number
     limit?: number
@@ -80,11 +42,28 @@ class TenantAPI {
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
   }): Promise<PaginatedResponse<Tenant>> {
-    return api.get('/tenants', { params })
+    const finalParams = {
+      limit: 100, // Get all tenants
+      page: 1,
+      sortBy: 'apartment',
+      sortOrder: 'asc',
+      ...params
+    }
+    return api.get('/tenants', { params: finalParams })
+  }
+
+  // Get tenant by ID (admin)
+  async getTenantById(id: string): Promise<{ success: boolean; data: Tenant }> {
+    return api.get(`/tenants/${id}`)
+  }
+
+  // Get tenant dashboard (tenant)
+  async getDashboard(): Promise<{ success: boolean; data: any }> {
+    return api.get('/tenants/dashboard/me')
   }
 
   // Create tenant (admin)
-  async createTenant(data: Omit<Tenant, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; message: string; data: Tenant }> {
+  async createTenant(data: any): Promise<{ success: boolean; message: string; data: Tenant }> {
     return api.post('/tenants', data)
   }
 
@@ -96,11 +75,6 @@ class TenantAPI {
   // Delete tenant (admin)
   async deleteTenant(id: string): Promise<{ success: boolean; message: string }> {
     return api.delete(`/tenants/${id}`)
-  }
-
-  // Update tenant balance (admin)
-  async updateBalance(id: string, balance: number): Promise<{ success: boolean; message: string; data: Tenant }> {
-    return api.put(`/tenants/${id}/balance`, { balance })
   }
 }
 
