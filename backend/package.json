@@ -7,14 +7,26 @@
     "dev": "tsx watch src/server.ts",
     "build": "npx prisma generate && tsc",
     "start": "node dist/server.js",
-    "render-build": "npm ci --include=dev && npx prisma generate && npm run build",
-    "render-start": "npx prisma migrate deploy && npm run start",
-    "postdeploy": "npm run db:seed",
+    
+    // UPDATED RENDER DEPLOYMENT SCRIPTS
+    "render-build": "npm ci && npx prisma generate && npm run build",
+    "render-start": "npm run db:deploy && npm run db:seed && npm run start",
+    
+    // NEW: Complete production deployment script
+    "deploy:full": "npm run db:deploy && npm run db:seed && npm run start",
+    
+    // FIXED: Added proper order for database setup
+    "db:setup": "npx prisma migrate deploy && npx prisma db push && npx prisma db seed",
+    
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:deploy": "npx prisma migrate deploy",
     "db:seed": "npx prisma db seed",
     "seed": "npm run db:seed",
+    
+    // NEW: Safe reset with automatic rebuild
+    "db:reset:full": "npx prisma migrate reset --force && npx prisma generate && npm run db:push && npm run db:seed",
+    
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset --force",
     "lint": "eslint src --ext .ts",
@@ -23,7 +35,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "type-check": "tsc --noEmit",
-    "heroku-postbuild": "npm run build",
+    
+    // REMOVED heroku-postbuild (you're using Render)
+    
     "docker:build": "docker build -t montez-a-backend .",
     "docker:run": "docker run -p 3001:3001 montez-a-backend",
     "clean": "rm -rf dist node_modules/.cache",
@@ -98,8 +112,5 @@
   "bugs": {
     "url": "https://github.com/yourusername/Montez-A-system/issues"
   },
-  "homepage": "https://github.com/yourusername/Montez-A-system#readme",
-  "volta": {
-    "node": "18.17.0"
-  }
+  "homepage": "https://github.com/yourusername/Montez-A-system#readme"
 }
