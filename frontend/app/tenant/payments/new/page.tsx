@@ -169,8 +169,8 @@ export default function NewPaymentPage() {
       })
 
       const paymentData = {
-        type: paymentType,
-        method: paymentMethod,
+        type: paymentType as 'RENT' | 'WATER' | 'OTHER',
+        method: paymentMethod as 'MPESA' | 'CASH' | 'BANK_TRANSFER' | 'CHECK',
         amount: parseFloat(amount),
         month,
         description,

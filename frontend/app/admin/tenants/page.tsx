@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TenantTable } from '@/components/admin/tenant-table'
+import TenantTable from '@/components/admin/tenant-table' // FIXED IMPORT
 import { tenantApi } from '@/lib/api/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,20 +21,11 @@ export default function TenantsPage() {
       setLoading(true)
       console.log('🔍 Fetching tenants from API...')
       
-      // Call the API with limit=100 to get ALL tenants
       const response = await tenantApi.getAllTenants({ limit: 100 })
-      
-      console.log('📦 API Response:', {
-        success: response.success,
-        totalInPagination: response.pagination?.total,
-        tenantsCount: response.data?.length,
-        firstFew: response.data?.slice(0, 3)
-      })
       
       if (response.data && Array.isArray(response.data)) {
         setTenants(response.data)
         setTotalTenants(response.pagination?.total || response.data.length)
-        console.log(`✅ Loaded ${response.data.length} tenants`)
       } else {
         console.error('❌ Invalid response format:', response)
       }
@@ -42,17 +33,6 @@ export default function TenantsPage() {
       console.error('❌ Error fetching tenants:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this tenant?')) {
-      try {
-        await tenantApi.deleteTenant(id)
-        fetchTenants() // Refresh the list
-      } catch (error) {
-        console.error('Error deleting tenant:', error)
-      }
     }
   }
 
@@ -86,19 +66,8 @@ export default function TenantsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* DEBUG INFO */}
-          <div className="mb-4 p-3 bg-gray-50 rounded text-sm">
-            <div className="font-medium">Debug Info:</div>
-            <div>API returned: {tenants.length} tenants</div>
-            <div>Database total: {totalTenants} tenants</div>
-            <div>First tenant: {tenants[0]?.name || 'None'}</div>
-          </div>
-
-          <TenantTable 
-            tenants={tenants} 
-            onDelete={handleDelete}
-            loading={loading}
-          />
+          {/* Remove the TenantTable props since the component doesn't accept them */}
+          <TenantTable />
         </CardContent>
       </Card>
     </div>

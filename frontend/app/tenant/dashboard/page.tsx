@@ -58,11 +58,9 @@ export default function TenantDashboard() {
         setDashboardData(dashboardResponse.data)
       }
 
-      // Fetch recent payments
+      // Fetch recent payments - FIXED: Removed sortBy and sortOrder parameters
       const paymentsResponse = await paymentApi.getTenantPayments({ 
-        limit: 3,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        limit: 3
       })
       
       if (paymentsResponse.data && Array.isArray(paymentsResponse.data)) {
@@ -445,11 +443,10 @@ export default function TenantDashboard() {
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
+            {/* Recent Activity - FIXED: Removed showRefresh prop */}
             <RecentActivity 
               activities={getRecentActivities()} 
               limit={4}
-              showRefresh={false}
             />
           </div>
         </div>

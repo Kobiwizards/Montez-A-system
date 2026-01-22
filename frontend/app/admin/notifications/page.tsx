@@ -295,7 +295,7 @@ export default function AdminNotificationsPage() {
                                 </div>
                                 <div className="text-right">
                                   <p className="text-xs text-gray-500">
-                                    {formatDate(notification.date, 'relative')}
+                                    {formatDate(notification.date, 'short')}
                                   </p>
                                   <div className="flex gap-2 mt-2">
                                     {!notification.read && (
