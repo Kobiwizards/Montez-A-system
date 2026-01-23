@@ -29,7 +29,8 @@
     "docker:run": "docker run -p 3001:3001 montez-a-backend",
     "clean": "rm -rf dist node_modules/.cache",
     "prebuild": "npm run clean",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "seed:production": "tsx prisma/seed-production.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.9.1",
