@@ -132,7 +132,8 @@ router.get('/debug/me', authenticate, (req, res) => {
 // Test tenant access with current user token
 router.get('/debug/my-access', authenticate, async (req, res) => {
   try {
-    const userId = req.user?.userId
+    // FIX: Use 'id' instead of 'userId' since your User model has 'id' field
+    const userId = req.user?.id
     
     if (!userId) {
       return res.status(401).json({
@@ -234,7 +235,8 @@ router.get(
   authorize('TENANT'),
   async (req, res) => {
     try {
-      const userId = req.user?.userId
+      // FIX: Use 'id' instead of 'userId' since your User model has 'id' field
+      const userId = req.user?.id
       
       const tenant = await prisma.user.findUnique({
         where: { 
