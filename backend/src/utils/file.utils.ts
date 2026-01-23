@@ -1,240 +1,101 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { Readable } from 'stream';
-import { createHash } from 'crypto';
-import { Stats } from 'fs';
+import fs from 'fs'
+import path from 'path'
+import { v4 as uuidv4 } from 'uuid'
 
-/**
- * Save uploaded file to disk
- */
-export async function saveFileToDisk(
-  file: Express.Multer.File,
-  directory: string
-): Promise<string> {
-  await fs.mkdir(directory, { recursive: true });
-  
-  // Sanitize filename
-  const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const fileName = `${Date.now()}-${sanitizedName}`;
-  const filePath = path.join(directory, fileName);
-  
-  // Write file buffer directly
-  await fs.writeFile(filePath, file.buffer);
-  
-  return filePath;
-}
+export class FileUtils {
+  static validateFile(file: Express.Multer.File): { valid: boolean; error?: string } {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf']
+    const maxSize = 5 * 1024 * 1024 // 5MB
 
-/**
- * Read file as Buffer
- */
-export async function readFileAsBuffer(filePath: string): Promise<Buffer> {
-  return await fs.readFile(filePath);
-}
+    if (!allowedTypes.includes(file.mimetype)) {
+      return {
+        valid: false,
+        error: `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
+      }
+    }
 
-/**
- * Calculate file hash
- */
-export async function calculateFileHash(
-  filePath: string,
-  algorithm: string = 'sha256'
-): Promise<string> {
-  const fileBuffer = await readFileAsBuffer(filePath);
-  const hash = createHash(algorithm);
-  
-  hash.update(fileBuffer);
-  return hash.digest('hex');
-}
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        error: `File size exceeds ${maxSize / (1024 * 1024)}MB limit`
+      }
+    }
 
-/**
- * Convert stream to Buffer
- */
-export async function streamToBuffer(stream: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    
-    stream.on('data', (chunk) => chunks.push(chunk));
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
-    stream.on('error', reject);
-  });
-}
-
-/**
- * Convert Buffer to file
- */
-export async function bufferToFile(buffer: Buffer, filePath: string): Promise<void> {
-  await fs.writeFile(filePath, buffer);
-}
-
-/**
- * Get file statistics
- */
-export async function getFileStats(filePath: string): Promise<Stats> {
-  return await fs.stat(filePath);
-}
-
-/**
- * Validate file type
- */
-export function validateFileType(
-  file: Express.Multer.File,
-  allowedMimeTypes: string[]
-): boolean {
-  return allowedMimeTypes.includes(file.mimetype);
-}
-
-/**
- * Validate file size
- */
-export function validateFileSize(
-  file: Express.Multer.File,
-  maxSizeInBytes: number
-): boolean {
-  return file.size <= maxSizeInBytes;
-}
-
-/**
- * Generate unique filename
- */
-export function generateUniqueFilename(originalName: string): string {
-  const timestamp = Date.now();
-  const randomString = Math.random().toString(36).substring(2, 15);
-  const extension = path.extname(originalName);
-  const nameWithoutExt = path.basename(originalName, extension);
-  const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '_');
-  
-  return `${sanitizedName}_${timestamp}_${randomString}${extension}`;
-}
-
-/**
- * Delete file safely
- */
-export async function deleteFile(filePath: string): Promise<void> {
-  try {
-    await fs.unlink(filePath);
-  } catch (error) {
-    console.error(`Failed to delete file: ${filePath}`, error);
+    return { valid: true }
   }
-}
 
-/**
- * Create directory if it doesn't exist
- */
-export async function ensureDirectoryExists(directory: string): Promise<void> {
-  try {
-    await fs.access(directory);
-  } catch {
-    await fs.mkdir(directory, { recursive: true });
+  static generateUniqueFilename(originalname: string): string {
+    const ext = path.extname(originalname)
+    const basename = path.basename(originalname, ext)
+    const timestamp = Date.now()
+    const uniqueId = uuidv4().slice(0, 8)
+    return `${basename}-${timestamp}-${uniqueId}${ext}`
   }
-}
 
-/**
- * Get file extension from mimetype
- */
-export function getExtensionFromMimeType(mimeType: string): string {
-  const extensions: Record<string, string> = {
-    'image/jpeg': '.jpg',
-    'image/jpg': '.jpg',
-    'image/png': '.png',
-    'image/gif': '.gif',
-    'image/webp': '.webp',
-    'application/pdf': '.pdf',
-    'application/msword': '.doc',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-    'application/vnd.ms-excel': '.xls',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-  };
-  
-  return extensions[mimeType] || '.bin';
-}
+  static async saveFile(file: Express.Multer.File, destination: string): Promise<string> {
+    const filename = this.generateUniqueFilename(file.originalname)
+    const filePath = path.join(destination, filename)
 
-/**
- * Compress image (placeholder - implement with sharp in production)
- */
-export async function compressImage(
-  filePath: string,
-  quality: number = 80
-): Promise<string> {
-  // In production, use sharp library for image compression
-  // For now, return original path
-  return filePath;
-}
+    // Ensure directory exists
+    await fs.promises.mkdir(destination, { recursive: true })
 
-/**
- * Extract text from image (placeholder for OCR)
- */
-export async function extractTextFromImage(
-  filePath: string
-): Promise<string | null> {
-  // In production, implement OCR with Tesseract.js
-  return null;
-}
+    // Move file
+    await fs.promises.writeFile(filePath, file.buffer)
 
-/**
- * Validate and process uploaded files
- */
-export async function processUploadedFiles(
-  files: Express.Multer.File[],
-  uploadDir: string,
-  options: {
-    maxSize?: number;
-    allowedTypes?: string[];
-    compressImages?: boolean;
-  } = {}
-): Promise<{
-  success: boolean;
-  files: string[];
-  errors: string[];
-}> {
-  const result = {
-    success: true,
-    files: [] as string[],
-    errors: [] as string[],
-  };
-  
-  const {
-    maxSize = 5 * 1024 * 1024, // 5MB default
-    allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'],
-    compressImages = false,
-  } = options;
-  
-  // Ensure upload directory exists
-  await ensureDirectoryExists(uploadDir);
-  
-  for (const file of files) {
-    try {
-      // Validate file type
-      if (!validateFileType(file, allowedTypes)) {
-        result.errors.push(
-          `File ${file.originalname}: Invalid file type. Allowed: ${allowedTypes.join(', ')}`
-        );
-        result.success = false;
-        continue;
-      }
-      
-      // Validate file size
-      if (!validateFileSize(file, maxSize)) {
-        result.errors.push(
-          `File ${file.originalname}: File too large. Max size: ${maxSize / (1024 * 1024)}MB`
-        );
-        result.success = false;
-        continue;
-      }
-      
-      // Save file
-      const savedPath = await saveFileToDisk(file, uploadDir);
-      
-      // Compress image if needed
-      let finalPath = savedPath;
-      if (compressImages && file.mimetype.startsWith('image/')) {
-        finalPath = await compressImage(savedPath);
-      }
-      
-      result.files.push(finalPath);
-    } catch (error) {
-      result.errors.push(`File ${file.originalname}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      result.success = false;
+    return filename
+  }
+
+  static async deleteFile(filePath: string): Promise<void> {
+    if (fs.existsSync(filePath)) {
+      await fs.promises.unlink(filePath)
     }
   }
-  
-  return result;
+
+  static async cleanupDirectory(directory: string, maxAgeDays: number = 30): Promise<void> {
+    if (!fs.existsSync(directory)) return
+
+    const files = await fs.promises.readdir(directory)
+    const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000)
+
+    for (const file of files) {
+      const filePath = path.join(directory, file)
+      const stats = await fs.promises.stat(filePath)
+
+      if (stats.isFile() && stats.mtimeMs < cutoff) {
+        await fs.promises.unlink(filePath)
+      }
+    }
+  }
+
+  static getFileExtension(filename: string): string {
+    return path.extname(filename).toLowerCase()
+  }
+
+  static isImageFile(filename: string): boolean {
+    const ext = this.getFileExtension(filename)
+    return ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(ext)
+  }
+
+  static isPdfFile(filename: string): boolean {
+    const ext = this.getFileExtension(filename)
+    return ext === '.pdf'
+  }
+
+  static async getFileSize(filePath: string): Promise<number> {
+    const stats = await fs.promises.stat(filePath)
+    return stats.size
+  }
+
+  static formatFileSize(bytes: number): string {
+    const units = ['B', 'KB', 'MB', 'GB']
+    let size = bytes
+    let unitIndex = 0
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024
+      unitIndex++
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`
+  }
 }

@@ -1,126 +1,96 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileService = void 0;
-const fs = __importStar(require("fs/promises"));
-const path = __importStar(require("path"));
-const config_1 = require("../config");
 const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+const uuid_1 = require("uuid");
 class FileService {
     constructor() {
-        const storage = multer_1.default.memoryStorage();
-        this.upload = (0, multer_1.default)({
-            storage,
-            limits: {
-                fileSize: config_1.config.maxFileSize,
+        this.uploadDir = process.env.UPLOAD_DIR || './uploads';
+        this.receiptDir = process.env.RECEIPT_DIR || './receipts';
+        this.storage = multer_1.default.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, this.uploadDir);
             },
-            fileFilter: (req, file, cb) => {
-                if (config_1.config.allowedFileTypes.includes(file.mimetype)) {
-                    cb(null, true);
-                }
-                else {
-                    cb(new Error(`Invalid file type. Allowed types: ${config_1.config.allowedFileTypes.join(', ')}`));
-                }
+            filename: (req, file, cb) => {
+                const uniqueName = `${(0, uuid_1.v4)()}-${Date.now()}${path_1.default.extname(file.originalname)}`;
+                cb(null, uniqueName);
+            }
+        });
+        this.fileFilter = (req, file, cb) => {
+            const allowedTypes = /jpeg|jpg|png|gif|pdf/;
+            const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
+            const mimetype = allowedTypes.test(file.mimetype);
+            if (mimetype && extname) {
+                return cb(null, true);
+            }
+            else {
+                cb(new Error('Only images and PDFs are allowed'));
+            }
+        };
+        this.ensureDirectoriesExist();
+    }
+    ensureDirectoriesExist() {
+        if (!fs_1.default.existsSync(this.uploadDir)) {
+            fs_1.default.mkdirSync(this.uploadDir, { recursive: true });
+        }
+        if (!fs_1.default.existsSync(this.receiptDir)) {
+            fs_1.default.mkdirSync(this.receiptDir, { recursive: true });
+        }
+    }
+    getMulterConfig() {
+        return (0, multer_1.default)({
+            storage: this.storage,
+            fileFilter: this.fileFilter,
+            limits: {
+                fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880') // 5MB default
             }
         });
     }
-    getMulterConfig() {
-        return this.upload;
+    // ADD THIS METHOD
+    async saveFile(file, subdirectory) {
+        const dir = path_1.default.join(this.uploadDir, subdirectory);
+        if (!fs_1.default.existsSync(dir)) {
+            fs_1.default.mkdirSync(dir, { recursive: true });
+        }
+        const uniqueName = `${(0, uuid_1.v4)()}-${Date.now()}${path_1.default.extname(file.originalname)}`;
+        const filePath = path_1.default.join(dir, uniqueName);
+        await fs_1.default.promises.writeFile(filePath, file.buffer);
+        return filePath;
     }
-    async saveFile(file, subfolder = '') {
-        const uploadDir = path.join(config_1.config.uploadPath, subfolder);
-        // Create directory if it doesn't exist
-        await fs.mkdir(uploadDir, { recursive: true });
-        // Generate unique filename
-        const fileExt = path.extname(file.originalname);
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExt}`;
-        const filePath = path.join(uploadDir, fileName);
-        // Save file - FIX: Use file.buffer directly
-        await fs.writeFile(filePath, file.buffer);
-        return path.join(subfolder, fileName);
+    async saveReceipt(fileBuffer, filename) {
+        const filePath = path_1.default.join(this.receiptDir, filename);
+        await fs_1.default.promises.writeFile(filePath, fileBuffer);
+        return filePath;
     }
     async deleteFile(filePath) {
-        const fullPath = path.join(config_1.config.uploadPath, filePath);
-        try {
-            await fs.unlink(fullPath);
-        }
-        catch (error) {
-            console.error('Failed to delete file:', error);
+        if (fs_1.default.existsSync(filePath)) {
+            await fs_1.default.promises.unlink(filePath);
         }
     }
-    async fileExists(filePath) {
-        try {
-            await fs.access(filePath);
-            return true;
-        }
-        catch {
-            return false;
-        }
-    }
-    async getFileSize(filePath) {
-        const stats = await fs.stat(filePath);
-        return stats.size;
-    }
-    async listFiles(directory) {
-        try {
-            return await fs.readdir(directory);
-        }
-        catch (error) {
-            console.error('Failed to list files:', error);
-            return [];
-        }
-    }
-    async cleanupOldFiles(directory, daysOld = 30) {
-        try {
-            const files = await this.listFiles(directory);
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-            for (const file of files) {
-                const filePath = path.join(directory, file);
-                const stats = await fs.stat(filePath);
-                if (stats.mtime < cutoffDate) {
-                    await this.deleteFile(filePath);
+    async cleanupOldFiles(daysOld = 30) {
+        const cutoff = Date.now() - (daysOld * 24 * 60 * 60 * 1000);
+        const cleanupDirectory = async (dir) => {
+            try {
+                const files = await fs_1.default.promises.readdir(dir);
+                for (const file of files) {
+                    const filePath = path_1.default.join(dir, file);
+                    const stats = await fs_1.default.promises.stat(filePath);
+                    if (stats.isFile() && stats.mtimeMs < cutoff) {
+                        await fs_1.default.promises.unlink(filePath);
+                    }
                 }
             }
-        }
-        catch (error) {
-            console.error('Failed to cleanup old files:', error);
-        }
+            catch (error) {
+                console.error(`Error cleaning up directory ${dir}:`, error);
+            }
+        };
+        await cleanupDirectory(this.uploadDir);
+        await cleanupDirectory(this.receiptDir);
     }
 }
 exports.FileService = FileService;

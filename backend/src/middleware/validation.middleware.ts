@@ -26,7 +26,7 @@ export const validate = (schema: ZodSchema<any> | ValidationSchema) => {
         const queryResult = validationSchema.query?.safeParse(req.query)
         const paramsResult = validationSchema.params?.safeParse(req.params)
 
-        const errors = []
+        const errors: any[] = [] // Changed from never[] to any[]
         
         if (bodyResult && !bodyResult.success) errors.push(...bodyResult.error.errors)
         if (queryResult && !queryResult.success) errors.push(...queryResult.error.errors)

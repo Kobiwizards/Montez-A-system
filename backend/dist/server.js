@@ -17,7 +17,7 @@ async function startServer() {
         const app = (0, app_1.createApp)();
         const server = (0, http_1.createServer)(app);
         // Setup WebSocket for real-time updates
-        (0, websocket_1.setupWebSocket)(server);
+        new websocket_1.WebSocketService(server);
         server.listen(PORT, () => {
             console.log(`��� Server running on port ${PORT}`);
             console.log(`��� API Documentation: http://localhost:${PORT}/api-docs`);

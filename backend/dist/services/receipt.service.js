@@ -5,173 +5,166 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceiptService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
-const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const config_1 = require("../config");
-const prisma_1 = require("../lib/prisma");
+const path_1 = __importDefault(require("path"));
+const date_fns_1 = require("date-fns");
 class ReceiptService {
-    async generateReceipt(payment) {
-        try {
-            // Get payment with tenant details
-            const paymentWithTenant = await prisma_1.prisma.payment.findUnique({
-                where: { id: payment.id },
-                include: {
-                    tenant: true,
-                },
-            });
-            if (!paymentWithTenant) {
-                throw new Error('Payment not found');
-            }
-            const { tenant } = paymentWithTenant;
-            // Generate receipt number
-            const receiptNumber = `MTA-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)
-                .toString()
-                .padStart(4, '0')}`;
-            // Create PDF document
-            const doc = new pdfkit_1.default({
-                size: 'A4',
-                margin: 50,
-            });
-            // Create receipts directory if it doesn't exist
-            const receiptsDir = config_1.config.receiptsPath;
-            if (!fs_1.default.existsSync(receiptsDir)) {
-                fs_1.default.mkdirSync(receiptsDir, { recursive: true });
-            }
-            const filePath = path_1.default.join(receiptsDir, `${receiptNumber}.pdf`);
-            const writeStream = fs_1.default.createWriteStream(filePath);
-            doc.pipe(writeStream);
-            // Add content to PDF
-            this.addReceiptContent(doc, receiptNumber, paymentWithTenant, tenant);
-            // End document
-            doc.end();
-            // Wait for write to complete
-            await new Promise((resolve, reject) => {
-                writeStream.on('finish', () => resolve());
-                writeStream.on('error', reject);
-            });
-            // Save receipt to database
-            const receipt = await prisma_1.prisma.receipt.create({
-                data: {
-                    paymentId: payment.id,
-                    tenantId: tenant.id, // ADDED: Required by schema
-                    receiptNumber,
-                    filePath: `${receiptNumber}.pdf`,
-                    generatedAt: new Date(),
-                },
-            });
-            return receipt;
-        }
-        catch (error) {
-            console.error('Error generating receipt:', error);
-            throw error;
+    constructor() {
+        this.receiptDir = process.env.RECEIPT_DIR || './receipts';
+        if (!fs_1.default.existsSync(this.receiptDir)) {
+            fs_1.default.mkdirSync(this.receiptDir, { recursive: true });
         }
     }
-    addReceiptContent(doc, receiptNumber, payment, tenant) {
-        // Header
-        doc
-            .fontSize(20)
-            .text(config_1.config.appName, { align: 'center' })
-            .fontSize(12)
-            .text('Property Management System', { align: 'center' })
-            .moveDown();
-        // Receipt header
-        doc
-            .fontSize(16)
-            .text('PAYMENT RECEIPT', { align: 'center' })
-            .moveDown();
-        // Receipt details
-        doc.fontSize(10).text(`Receipt Number: ${receiptNumber}`, { align: 'right' });
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, { align: 'right' });
-        doc.text(`Time: ${new Date().toLocaleTimeString()}`, { align: 'right' });
+    async generateReceipt(data) {
+        return new Promise((resolve, reject) => {
+            try {
+                const filename = `${data.receiptNumber}.pdf`;
+                const filePath = path_1.default.join(this.receiptDir, filename);
+                const doc = new pdfkit_1.default({
+                    size: 'A4',
+                    margin: 50,
+                    info: {
+                        Title: `Receipt ${data.receiptNumber}`,
+                        Author: 'Montez A Property Management',
+                        Subject: 'Payment Receipt'
+                    }
+                });
+                const stream = fs_1.default.createWriteStream(filePath);
+                doc.pipe(stream);
+                // Header
+                this.addHeader(doc, data);
+                // Receipt details
+                this.addReceiptDetails(doc, data);
+                // Payment details
+                this.addPaymentDetails(doc, data);
+                // Footer
+                this.addFooter(doc);
+                doc.end();
+                stream.on('finish', () => resolve(filePath));
+                stream.on('error', reject);
+            }
+            catch (error) {
+                reject(error);
+            }
+        });
+    }
+    addHeader(doc, data) {
+        // Logo or title
+        doc.fontSize(24)
+            .font('Helvetica-Bold')
+            .text('MONTEZ A APARTMENTS', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(14)
+            .font('Helvetica')
+            .text('Property Management System', { align: 'center' });
         doc.moveDown();
-        // Line separator
-        doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+        doc.fontSize(16)
+            .font('Helvetica-Bold')
+            .text('PAYMENT RECEIPT', { align: 'center', underline: true });
         doc.moveDown();
-        // Tenant Information
-        doc.fontSize(12).text('TENANT INFORMATION:');
-        doc.fontSize(10);
-        doc.text(`Name: ${tenant.name}`);
-        doc.text(`Apartment: ${tenant.apartment}`);
-        doc.text(`Email: ${tenant.email}`);
-        doc.text(`Phone: ${tenant.phone}`);
-        doc.moveDown();
-        // Payment Information
-        doc.fontSize(12).text('PAYMENT INFORMATION:');
-        doc.fontSize(10);
-        doc.text(`Payment ID: ${payment.id.slice(-8)}`);
-        doc.text(`Type: ${payment.type}`);
-        doc.text(`Method: ${payment.method}`);
-        doc.text(`Month: ${payment.month}`);
-        doc.text(`Transaction Code: ${payment.transactionCode || 'N/A'}`);
-        doc.text(`Verified By: ${payment.verifiedBy ? 'Admin' : 'N/A'}`);
-        doc.text(`Verified At: ${payment.verifiedAt ? new Date(payment.verifiedAt).toLocaleString() : 'N/A'}`);
-        doc.moveDown();
-        // Amount
-        doc.fontSize(14).text('AMOUNT DETAILS:');
-        doc.fontSize(12);
-        doc.text(`Amount: KSh ${payment.amount.toLocaleString()}`, { align: 'right' });
-        doc.moveDown();
-        // Line separator
-        doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-        doc.moveDown();
-        // Total
-        doc
-            .fontSize(16)
-            .text(`TOTAL: KSh ${payment.amount.toLocaleString()}`, { align: 'right' })
-            .moveDown(2);
-        // Water details if applicable
-        if (payment.type === 'WATER') {
-            const waterUnits = Math.floor(payment.amount / config_1.config.waterRatePerUnit);
-            doc.fontSize(10).text(`Water Units: ${waterUnits} units @ KSh ${config_1.config.waterRatePerUnit}/unit`);
-        }
-        // Rent details if applicable
-        if (payment.type === 'RENT') {
-            const unitType = tenant.unitType === 'ONE_BEDROOM' ? 'One Bedroom' : 'Two Bedroom';
-            const expectedRent = tenant.unitType === 'ONE_BEDROOM' ? config_1.config.oneBedroomRent : config_1.config.twoBedroomRent;
-            doc.fontSize(10).text(`Rent for ${unitType} Apartment: KSh ${expectedRent.toLocaleString()}/month`);
-        }
+        doc.fontSize(12)
+            .font('Helvetica')
+            .text(`Receipt No: ${data.receiptNumber}`, { align: 'right' })
+            .text(`Date: ${(0, date_fns_1.format)(data.date, 'dd/MM/yyyy HH:mm')}`, { align: 'right' });
         doc.moveDown(2);
-        // Footer
-        doc
-            .fontSize(10)
-            .text('Thank you for your payment!', { align: 'center' })
-            .text('This is an official receipt for your records.', { align: 'center' })
-            .moveDown();
-        // Signature area
-        doc.text('_________________________', { align: 'right' });
-        doc.text('Authorized Signature', { align: 'right' })
-            .moveDown();
-        // Contact information
-        doc
-            .fontSize(8)
-            .text(`${config_1.config.appName}`, { align: 'center' })
-            .text('Montez A Apartments, Kizito Road', { align: 'center' })
-            .text(`Email: ${config_1.config.email.from}`, { align: 'center' })
-            .text('This is a computer-generated receipt. No physical signature required.', {
-            align: 'center',
-        });
     }
-    async getReceiptFile(receiptId) {
-        const receipt = await prisma_1.prisma.receipt.findUnique({
-            where: { id: receiptId },
-        });
-        if (!receipt) {
-            throw new Error('Receipt not found');
+    addReceiptDetails(doc, data) {
+        doc.fontSize(12)
+            .font('Helvetica')
+            .text('RECEIPT DETAILS', { underline: true });
+        doc.moveDown(0.5);
+        doc.font('Helvetica')
+            .text(`Tenant: ${data.tenantName}`)
+            .text(`Apartment: ${data.apartment}`)
+            .text(`Payment Type: ${data.paymentType}`)
+            .text(`Month: ${data.month}`);
+        if (data.transactionCode) {
+            doc.text(`Transaction Code: ${data.transactionCode}`);
         }
-        const filePath = path_1.default.join(config_1.config.receiptsPath, receipt.filePath);
-        if (!fs_1.default.existsSync(filePath)) {
-            throw new Error('Receipt file not found');
+        if (data.caretakerName) {
+            doc.text(`Caretaker: ${data.caretakerName}`);
         }
-        // Update download count
-        await prisma_1.prisma.receipt.update({
-            where: { id: receiptId },
-            data: {
-                downloaded: true,
-                downloadedAt: new Date(),
-                downloadCount: { increment: 1 },
-            },
-        });
-        return filePath;
+        doc.moveDown();
+    }
+    addPaymentDetails(doc, data) {
+        doc.fontSize(14)
+            .font('Helvetica-Bold')
+            .text('PAYMENT SUMMARY', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(16)
+            .font('Helvetica-Bold')
+            .text(`Amount: KSh ${data.amount.toLocaleString()}`, { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12)
+            .font('Helvetica')
+            .text('Amount in words:', { underline: true });
+        const amountInWords = this.numberToWords(data.amount);
+        doc.text(`${amountInWords} Kenya Shillings Only`);
+        doc.moveDown(2);
+    }
+    addFooter(doc) {
+        doc.moveDown(4);
+        doc.fontSize(10)
+            .font('Helvetica')
+            .text('________________________________', { align: 'center' })
+            .text('Authorized Signature', { align: 'center' });
+        doc.moveDown();
+        doc.text('Montez A Property Management', { align: 'center' })
+            .text('Kizito Road, Nairobi', { align: 'center' })
+            .text('Email: admin@monteza.com | Phone: +254 712 345 678', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(9)
+            .font('Helvetica-Oblique')
+            .text('This is a computer-generated receipt. No signature required.', { align: 'center' })
+            .text('Valid for official purposes only.', { align: 'center' });
+    }
+    numberToWords(num) {
+        // Simplified number to words conversion
+        const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+        const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+        if (num === 0)
+            return 'Zero';
+        let words = '';
+        const thousands = Math.floor(num / 1000);
+        const remainder = num % 1000;
+        if (thousands > 0) {
+            words += this.numberToWords(thousands) + ' Thousand ';
+        }
+        if (remainder > 0) {
+            const hundreds = Math.floor(remainder / 100);
+            const tensAndOnes = remainder % 100;
+            if (hundreds > 0) {
+                words += units[hundreds] + ' Hundred ';
+            }
+            if (tensAndOnes > 0) {
+                if (tensAndOnes < 10) {
+                    words += units[tensAndOnes] + ' ';
+                }
+                else if (tensAndOnes < 20) {
+                    words += teens[tensAndOnes - 10] + ' ';
+                }
+                else {
+                    const tensDigit = Math.floor(tensAndOnes / 10);
+                    const onesDigit = tensAndOnes % 10;
+                    words += tens[tensDigit] + ' ';
+                    if (onesDigit > 0) {
+                        words += units[onesDigit] + ' ';
+                    }
+                }
+            }
+        }
+        return words.trim();
+    }
+    async getReceiptPath(receiptNumber) {
+        const filePath = path_1.default.join(this.receiptDir, `${receiptNumber}.pdf`);
+        return fs_1.default.existsSync(filePath) ? filePath : null;
+    }
+    async deleteReceipt(receiptNumber) {
+        const filePath = path_1.default.join(this.receiptDir, `${receiptNumber}.pdf`);
+        if (fs_1.default.existsSync(filePath)) {
+            await fs_1.default.promises.unlink(filePath);
+        }
     }
 }
 exports.ReceiptService = ReceiptService;

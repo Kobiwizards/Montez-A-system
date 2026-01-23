@@ -115,7 +115,18 @@ export class ReceiptController {
         })
 
         if (fullPayment) {
-          await this.receiptService.generateReceipt(fullPayment)
+          const receiptData = {
+            receiptNumber: `MTA-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${fullPayment.id.slice(-4).toUpperCase()}`,
+            tenantName: fullPayment.tenant.name,
+            apartment: fullPayment.tenant.apartment,
+            paymentType: fullPayment.type,
+            amount: fullPayment.amount,
+            month: fullPayment.month,
+            date: new Date(),
+            transactionCode: fullPayment.transactionCode || undefined,
+            caretakerName: fullPayment.caretakerName || undefined
+          }
+          await this.receiptService.generateReceipt(receiptData)
         }
       }
 
@@ -192,23 +203,50 @@ export class ReceiptController {
         })
       }
 
-      const receipt = await this.receiptService.generateReceipt(payment)
+      const receiptData = {
+        receiptNumber: payment.receipts?.[0]?.receiptNumber || `MTA-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${payment.id.slice(-4).toUpperCase()}`,
+        tenantName: payment.tenant.name,
+        apartment: payment.tenant.apartment,
+        paymentType: payment.type,
+        amount: payment.amount,
+        month: payment.month,
+        date: new Date(),
+        transactionCode: payment.transactionCode || undefined,
+        caretakerName: payment.caretakerName || undefined
+      }
+      const receipt = await this.receiptService.generateReceipt(receiptData)
 
-      // Log receipt generation
-      await this.auditLogService.log({
-        userId: req.user.id,
-        userEmail: req.user.email,
-        userRole: req.user.role,
-        action: 'CREATE',
-        entity: 'RECEIPT',
-        entityId: receipt.id,
-        newData: {
-          receiptNumber: receipt.receiptNumber,
-          paymentId: payment.id,
-        },
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      })
+      if (typeof receipt === 'string') {
+        // receipt is file path
+        await this.auditLogService.log({
+          userId: req.user?.id,
+          userEmail: req.user?.email,
+          userRole: req.user?.role,
+          action: 'CREATE',
+          entity: 'RECEIPT',
+          entityId: receipt,
+          newData: {
+            receiptNumber: receiptData.receiptNumber
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        })
+      } else {
+        // receipt is file path string
+        await this.auditLogService.log({
+          userId: req.user?.id,
+          userEmail: req.user?.email,
+          userRole: req.user?.role,
+          action: 'CREATE',
+          entity: 'RECEIPT',
+          entityId: receipt,
+          newData: {
+            receiptNumber: receiptData.receiptNumber
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        })
+      }
 
       return res.status(201).json({
         success: true,

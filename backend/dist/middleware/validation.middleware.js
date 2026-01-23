@@ -17,7 +17,7 @@ const validate = (schema) => {
                 const bodyResult = validationSchema.body?.safeParse(req.body);
                 const queryResult = validationSchema.query?.safeParse(req.query);
                 const paramsResult = validationSchema.params?.safeParse(req.params);
-                const errors = [];
+                const errors = []; // Changed from never[] to any[]
                 if (bodyResult && !bodyResult.success)
                     errors.push(...bodyResult.error.errors);
                 if (queryResult && !queryResult.success)

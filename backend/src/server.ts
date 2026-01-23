@@ -2,7 +2,7 @@ import { createApp } from './app'
 import { config } from './config'
 import { PrismaClient } from '@prisma/client'
 import { createServer } from 'http'
-import { setupWebSocket } from './websocket'
+import { WebSocketService } from './websocket'
 import { AnalyticsService } from './services/analytics.service'
 
 const prisma = new PrismaClient()
@@ -20,13 +20,13 @@ async function startServer() {
     const server = createServer(app)
 
     // Setup WebSocket for real-time updates
-    setupWebSocket(server)
+    new WebSocketService(server)
 
     server.listen(PORT, () => {
-      console.log(`íº€ Server running on port ${PORT}`)
-      console.log(`í³Š API Documentation: http://localhost:${PORT}/api-docs`)
-      console.log(`í¼ Environment: ${config.nodeEnv}`)
-      console.log(`í´— CORS Origin: ${config.corsOrigins[0]}`)
+      console.log(`ï¿½ï¿½ï¿½ Server running on port ${PORT}`)
+      console.log(`ï¿½ï¿½ï¿½ API Documentation: http://localhost:${PORT}/api-docs`)
+      console.log(`ï¿½ï¿½ï¿½ Environment: ${config.nodeEnv}`)
+      console.log(`ï¿½ï¿½ï¿½ CORS Origin: ${config.corsOrigins[0]}`)
     })
 
     // Setup automated tasks
@@ -34,13 +34,13 @@ async function startServer() {
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
-      console.log('í»‘ Received shutdown signal')
+      console.log('ï¿½ï¿½ï¿½ Received shutdown signal')
       
       server.close(async () => {
-        console.log('í´’ HTTP server closed')
+        console.log('ï¿½ï¿½ï¿½ HTTP server closed')
         
         await prisma.$disconnect()
-        console.log('í´Œ Database connection closed')
+        console.log('ï¿½ï¿½ï¿½ Database connection closed')
         
         process.exit(0)
       })
@@ -62,7 +62,7 @@ async function startServer() {
 }
 
 function setupAutomatedTasks() {
-  console.log('í´„ Setting up automated tasks...')
+  console.log('ï¿½ï¿½ï¿½ Setting up automated tasks...')
   
   // Daily analytics snapshot at 1 AM
   const scheduleAnalyticsSnapshot = () => {
@@ -79,7 +79,7 @@ function setupAutomatedTasks() {
     setTimeout(async () => {
       try {
         await analyticsService.generateDailySnapshot()
-        console.log('í³Š Daily analytics snapshot generated')
+        console.log('ï¿½ï¿½ï¿½ Daily analytics snapshot generated')
       } catch (error) {
         console.error('âŒ Failed to generate analytics snapshot:', error)
       }
@@ -105,7 +105,7 @@ function setupAutomatedTasks() {
     setTimeout(async () => {
       try {
         await analyticsService.sendPaymentReminders()
-        console.log('í²³ Payment reminders sent')
+        console.log('ï¿½ï¿½ï¿½ Payment reminders sent')
       } catch (error) {
         console.error('âŒ Failed to send payment reminders:', error)
       }

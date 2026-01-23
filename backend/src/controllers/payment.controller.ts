@@ -320,7 +320,19 @@ export class PaymentController {
       // If verified, generate receipt and update balances
       if (status === 'VERIFIED') {
         // Generate receipt
-        const receipt = await this.receiptService.generateReceipt(payment)
+        const receiptData = {
+          receiptNumber: `MTA-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${payment.id.slice(-4).toUpperCase()}`,
+          tenantName: payment.tenant.name,
+          apartment: payment.tenant.apartment,
+          paymentType: payment.type,
+          amount: payment.amount,
+          month: payment.month,
+          date: new Date(),
+          transactionCode: payment.transactionCode || undefined,
+          caretakerName: payment.caretakerName || undefined
+        }
+
+        const receipt = await this.receiptService.generateReceipt(receiptData)
         
         // Update tenant balance for rent payments
         if (payment.type === 'RENT') {
