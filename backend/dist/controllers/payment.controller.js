@@ -533,7 +533,7 @@ class PaymentController {
         this.auditLogService = new audit_service_1.AuditLogService();
         this.receiptService = new receipt_service_1.ReceiptService();
         this.emailService = new email_service_1.EmailService();
-        this.fileService = (0, file_service_1.FileService)();
+        this.fileService = new file_service_1.FileService();
     }
 }
 exports.PaymentController = PaymentController;

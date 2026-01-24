@@ -104,7 +104,7 @@ class ReceiptController {
                     });
                     if (fullPayment) {
                         const receiptData = {
-                            receiptNumber: fullPayment.receiptNumber || `MTA-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${fullPayment.id.slice(-4).toUpperCase()}`,
+                            receiptNumber: `MTA-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${fullPayment.id.slice(-4).toUpperCase()}`,
                             tenantName: fullPayment.tenant.name,
                             apartment: fullPayment.tenant.apartment,
                             paymentType: fullPayment.type,

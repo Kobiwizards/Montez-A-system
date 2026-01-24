@@ -55,7 +55,7 @@ class AuditLogService {
         ]);
         // Get user info for logs that have userId
         const logsWithUsers = await Promise.all(logs.map(async (log) => {
-            let user = null;
+            let user = null; // FIX: Changed from 'let user: null = null'
             if (log.userId) {
                 user = await prisma_1.prisma.user.findUnique({
                     where: { id: log.userId },
@@ -91,7 +91,7 @@ class AuditLogService {
         });
         // Get user info for logs
         const logsWithUsers = await Promise.all(logs.map(async (log) => {
-            let user = null;
+            let user = null; // FIX: Changed type
             if (log.userId) {
                 user = await prisma_1.prisma.user.findUnique({
                     where: { id: log.userId },
