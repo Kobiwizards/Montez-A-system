@@ -1,4 +1,5 @@
-import { AuthRequest } from '../types'
+import { AuthenticatedRequest } from '../middleware/auth.middleware'
+import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AnalyticsService } from '../services/analytics.service'

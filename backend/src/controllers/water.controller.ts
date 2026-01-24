@@ -1,4 +1,5 @@
-import { AuthRequest } from '../types'
+import { AuthenticatedRequest } from '../middleware/auth.middleware'
+import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AuditLogService } from '../services/audit.service'
@@ -146,7 +147,7 @@ export class WaterController {
     }
   }
 
-  createReading = async (req: AuthRequest, res: Response): Promise<Response> => {
+  createReading = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -252,7 +253,7 @@ export class WaterController {
     }
   }
 
-  updateReading = async (req: AuthRequest, res: Response): Promise<Response> => {
+  updateReading = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -357,7 +358,7 @@ export class WaterController {
     }
   }
 
-  deleteReading = async (req: AuthRequest, res: Response): Promise<Response> => {
+  deleteReading = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -433,7 +434,7 @@ export class WaterController {
     }
   }
 
-  getTenantReadings = async (req: AuthRequest, res: Response): Promise<Response> => {
+  getTenantReadings = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({

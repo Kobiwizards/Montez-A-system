@@ -1,4 +1,5 @@
-import { AuthRequest } from '../types'
+import { AuthenticatedRequest } from '../middleware/auth.middleware'
+import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import bcrypt from "bcryptjs"
 import { prisma } from '../lib/prisma'
@@ -226,9 +227,9 @@ export class TenantController {
 
       // Log tenant creation
       await this.auditLogService.log({
-        userId: (req as AuthRequest).user?.id,
-        userEmail: (req as AuthRequest).user?.email,
-        userRole: (req as AuthRequest).user?.role,
+        userId: (req as AuthenticatedRequest).user?.id,
+        userEmail: (req as AuthenticatedRequest).user?.email,
+        userRole: (req as AuthenticatedRequest).user?.role,
         action: 'CREATE',
         entity: 'TENANT',
         entityId: tenant.id,
@@ -311,9 +312,9 @@ export class TenantController {
 
       // Log tenant update
       await this.auditLogService.log({
-        userId: (req as AuthRequest).user?.id,
-        userEmail: (req as AuthRequest).user?.email,
-        userRole: (req as AuthRequest).user?.role,
+        userId: (req as AuthenticatedRequest).user?.id,
+        userEmail: (req as AuthenticatedRequest).user?.email,
+        userRole: (req as AuthenticatedRequest).user?.role,
         action: 'UPDATE',
         entity: 'TENANT',
         entityId: tenant.id,
@@ -367,9 +368,9 @@ export class TenantController {
 
       // Log tenant deletion
       await this.auditLogService.log({
-        userId: (req as AuthRequest).user?.id,
-        userEmail: (req as AuthRequest).user?.email,
-        userRole: (req as AuthRequest).user?.role,
+        userId: (req as AuthenticatedRequest).user?.id,
+        userEmail: (req as AuthenticatedRequest).user?.email,
+        userRole: (req as AuthenticatedRequest).user?.role,
         action: 'DELETE',
         entity: 'TENANT',
         entityId: tenant.id,
@@ -391,7 +392,7 @@ export class TenantController {
     }
   }
 
-  getTenantDashboard = async (req: AuthRequest, res: Response): Promise<Response> => {
+  getTenantDashboard = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -526,9 +527,9 @@ export class TenantController {
 
       // Log balance update
       await this.auditLogService.log({
-        userId: (req as AuthRequest).user?.id,
-        userEmail: (req as AuthRequest).user?.email,
-        userRole: (req as AuthRequest).user?.role,
+        userId: (req as AuthenticatedRequest).user?.id,
+        userEmail: (req as AuthenticatedRequest).user?.email,
+        userRole: (req as AuthenticatedRequest).user?.role,
         action: 'UPDATE',
         entity: 'TENANT',
         entityId: tenant.id,

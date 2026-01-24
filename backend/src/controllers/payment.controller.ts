@@ -1,4 +1,5 @@
-import { AuthRequest } from '../types'
+import { AuthenticatedRequest } from '../middleware/auth.middleware'
+import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AuditLogService } from '../services/audit.service'
@@ -140,7 +141,7 @@ export class PaymentController {
     }
   }
 
-  createPayment = async (req: AuthRequest, res: Response): Promise<Response> => {
+  createPayment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -272,7 +273,7 @@ export class PaymentController {
     }
   }
 
-  verifyPayment = async (req: AuthRequest, res: Response): Promise<Response> => {
+  verifyPayment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -441,7 +442,7 @@ export class PaymentController {
     }
   }
 
-  getTenantPayments = async (req: AuthRequest, res: Response): Promise<Response> => {
+  getTenantPayments = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -501,7 +502,7 @@ export class PaymentController {
     }
   }
 
-  deletePayment = async (req: AuthRequest, res: Response): Promise<Response> => {
+  deletePayment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({

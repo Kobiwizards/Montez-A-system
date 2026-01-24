@@ -1,78 +1,87 @@
-import { AuthRequest } from '../types'
+import { AuthenticatedRequest } from '../middleware/auth.middleware'
 import { Request, Response } from 'express'
-import * as bcrypt from 'bcryptjs'
-import * as jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
-import { config } from '../config/index'
-import { AuditLogService } from '../services/audit.service'
+import { AuthenticatedRequest } from '../middleware/auth.middleware'
+import { AuditService } from '../services/audit.service'
 
 export class AuthController {
-  private auditLogService: AuditLogService
+  private auditService: AuditService
 
   constructor() {
-    this.auditLogService = new AuditLogService()
+    this.auditService = new AuditService()
   }
 
-  login = async (req: Request, res: Response): Promise<Response> => {
+  public login = async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body
 
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        })
+      }
+
       // Find user
       const user = await prisma.user.findUnique({
-        where: { email },
+        where: { email }
       })
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials',
+          message: 'Invalid credentials'
         })
       }
 
       // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password)
+      const isPasswordValid = await bcrypt.compare(password, user.password)
 
-      if (!isValidPassword) {
+      if (!isPasswordValid) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials',
+          message: 'Invalid credentials'
         })
       }
 
-      // Check if tenant account is active
-      if (user.role === 'TENANT' && user.status !== 'CURRENT') {
-        return res.status(403).json({
-          success: false,
-          message: 'Account is not active. Please contact management.',
-        })
+      // Generate tokens
+      const token = jwt.sign(
+        { userId: user.id, role: user.role },
+        process.env.JWT_SECRET!,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      )
+
+      const refreshToken = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_REFRESH_SECRET!,
+        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+      )
+
+      // Prepare user response (without password)
+      const userResponse = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        apartment: user.apartment,
+        unitType: user.unitType,
+        rentAmount: user.rentAmount,
+        waterRate: user.waterRate,
+        balance: user.balance,
+        status: user.status,
+        moveInDate: user.moveInDate,
+        leaseEndDate: user.leaseEndDate,
+        emergencyContact: user.emergencyContact,
+        idCopyUrl: user.idCopyUrl,
+        contractUrl: user.contractUrl,
+        createdAt: user.createdAt
       }
 
-      // Generate tokens - cast to string
-      const accessToken = jwt.sign(
-  {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    apartment: user.apartment === 'ADMIN' ? undefined : user.apartment,
-  },
-  config.jwtSecret,
-  { expiresIn: '7d' } // Use string literal from .env
-)
-
-const refreshToken = jwt.sign(
-  { id: user.id, email: user.email },
-  config.refreshTokenSecret,
-  { expiresIn: '30d' } // Use string literal from .env
-)
-
-      // Update last login time
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { updatedAt: new Date() },
-      })
-
-      // Log login activity
-      await this.auditLogService.log({
+      // Log login action
+      await this.auditService.log({
         userId: user.id,
         userEmail: user.email,
         userRole: user.role,
@@ -80,326 +89,245 @@ const refreshToken = jwt.sign(
         entity: 'USER',
         entityId: user.id,
         ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get('user-agent')
       })
 
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user
-
-      return res.status(200).json({
+      res.json({
         success: true,
-        message: 'Login successful',
         data: {
-          user: userWithoutPassword,
-          accessToken,
+          token,
           refreshToken,
-        },
+          user: userResponse
+        }
       })
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Login error:', error)
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Internal server error'
       })
     }
   }
 
-  register = async (req: Request, res: Response): Promise<Response> => {
-    try {
-      const {
-        email,
-        phone,
-        password,
-        name,
-        apartment,
-        unitType,
-        rentAmount,
-        moveInDate,
-        emergencyContact,
-        notes,
-      } = req.body
-
-      // Check if email already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
-      })
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'User with this email already exists',
-        })
-      }
-
-      // Check if apartment is already occupied
-      const existingTenant = await prisma.user.findUnique({
-        where: { apartment },
-      })
-
-      if (existingTenant) {
-        return res.status(400).json({
-          success: false,
-          message: `Apartment ${apartment} is already occupied`,
-        })
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10)
-
-      // Create user
-      const user = await prisma.user.create({
-        data: {
-          email,
-          phone,
-          password: hashedPassword,
-          name,
-          apartment,
-          unitType,
-          rentAmount,
-          moveInDate: new Date(moveInDate),
-          emergencyContact,
-          notes,
-          waterRate: config.waterRatePerUnit,
-          balance: 0,
-          status: 'CURRENT',
-          role: 'TENANT',
-        },
-      })
-
-      // Log registration
-      await this.auditLogService.log({
-        userId: user.id,
-        userEmail: user.email,
-        userRole: user.role,
-        action: 'CREATE',
-        entity: 'USER',
-        entityId: user.id,
-        newData: {
-          apartment,
-          unitType,
-          moveInDate,
-        },
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      })
-
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user
-
-      return res.status(201).json({
-        success: true,
-        message: 'Tenant registered successfully',
-        data: userWithoutPassword,
-      })
-    } catch (error) {
-      console.error('Registration error:', error)
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      })
-    }
-  }
-
-  getProfile = async (req: AuthRequest, res: Response): Promise<Response> => {
+  public getProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({
           success: false,
-          message: 'Not authenticated',
+          message: 'Not authenticated'
         })
       }
 
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.id },
-        include: {
-          payments: {
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-          },
-          waterReadings: {
-            orderBy: { month: 'desc' },
-            take: 3,
-          },
-          receipts: {
-            include: { payment: true },
-            orderBy: { generatedAt: 'desc' },
-            take: 5,
-          },
-        },
-      })
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found',
-        })
+      // Return user profile (without password)
+      const userResponse = {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name,
+        phone: req.user.phone,
+        role: req.user.role,
+        apartment: req.user.apartment,
+        unitType: req.user.unitType,
+        rentAmount: req.user.rentAmount,
+        waterRate: req.user.waterRate,
+        balance: req.user.balance,
+        status: req.user.status,
+        moveInDate: req.user.moveInDate,
+        leaseEndDate: req.user.leaseEndDate,
+        emergencyContact: req.user.emergencyContact,
+        idCopyUrl: req.user.idCopyUrl,
+        contractUrl: req.user.contractUrl,
+        createdAt: req.user.createdAt
       }
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user
-
-      return res.status(200).json({
+      res.json({
         success: true,
-        data: userWithoutPassword,
+        data: userResponse
       })
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Get profile error:', error)
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Internal server error'
       })
     }
   }
 
-  updateProfile = async (req: AuthRequest, res: Response): Promise<Response> => {
+  public updateProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({
           success: false,
-          message: 'Not authenticated',
+          message: 'Not authenticated'
         })
       }
 
-      const { phone, emergencyContact, notes } = req.body
+      const { name, phone, emergencyContact } = req.body
 
-      // Only allow tenants to update specific fields
-      const updateData: any = {}
-      if (phone) updateData.phone = phone
-      if (emergencyContact) updateData.emergencyContact = emergencyContact
-      if (notes) updateData.notes = notes
-
-      const user = await prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id: req.user.id },
-        data: updateData,
+        data: {
+          name: name || req.user.name,
+          phone: phone || req.user.phone,
+          emergencyContact: emergencyContact || req.user.emergencyContact
+        }
       })
 
-      // Log profile update
-      await this.auditLogService.log({
-        userId: user.id,
-        userEmail: user.email,
-        userRole: user.role,
+      // Log update action
+      await this.auditService.log({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        userRole: req.user.role,
         action: 'UPDATE',
         entity: 'USER',
-        entityId: user.id,
-        newData: updateData,
+        entityId: req.user.id,
         ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get('user-agent')
       })
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user
+      // Return updated user (without password)
+      const userResponse = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        apartment: updatedUser.apartment,
+        unitType: updatedUser.unitType,
+        rentAmount: updatedUser.rentAmount,
+        waterRate: updatedUser.waterRate,
+        balance: updatedUser.balance,
+        status: updatedUser.status,
+        moveInDate: updatedUser.moveInDate,
+        leaseEndDate: updatedUser.leaseEndDate,
+        emergencyContact: updatedUser.emergencyContact,
+        idCopyUrl: updatedUser.idCopyUrl,
+        contractUrl: updatedUser.contractUrl,
+        createdAt: updatedUser.createdAt
+      }
 
-      return res.status(200).json({
+      res.json({
         success: true,
-        message: 'Profile updated successfully',
-        data: userWithoutPassword,
+        data: userResponse,
+        message: 'Profile updated successfully'
       })
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Update profile error:', error)
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Internal server error'
       })
     }
   }
 
-  changePassword = async (req: AuthRequest, res: Response): Promise<Response> => {
+  public changePassword = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({
           success: false,
-          message: 'Not authenticated',
+          message: 'Not authenticated'
         })
       }
 
       const { currentPassword, newPassword } = req.body
 
-      // Get user with password
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.id },
-      })
-
-      if (!user) {
-        return res.status(404).json({
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
           success: false,
-          message: 'User not found',
+          message: 'Current password and new password are required'
         })
       }
 
       // Verify current password
-      const isValidPassword = await bcrypt.compare(currentPassword, user.password)
+      const isPasswordValid = await bcrypt.compare(currentPassword, req.user.password)
 
-      if (!isValidPassword) {
-        return res.status(400).json({
+      if (!isPasswordValid) {
+        return res.status(401).json({
           success: false,
-          message: 'Current password is incorrect',
+          message: 'Current password is incorrect'
         })
       }
 
       // Hash new password
       const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-      // Update password
       await prisma.user.update({
-        where: { id: user.id },
-        data: { password: hashedPassword },
+        where: { id: req.user.id },
+        data: { password: hashedPassword }
       })
 
       // Log password change
-      await this.auditLogService.log({
-        userId: user.id,
-        userEmail: user.email,
-        userRole: user.role,
-        action: 'UPDATE',
+      await this.auditService.log({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        userRole: req.user.role,
+        action: 'CHANGE_PASSWORD',
         entity: 'USER',
-        entityId: user.id,
+        entityId: req.user.id,
         ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+        userAgent: req.get('user-agent')
       })
 
-      return res.status(200).json({
+      res.json({
         success: true,
-        message: 'Password changed successfully',
+        message: 'Password changed successfully'
       })
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Change password error:', error)
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Internal server error'
       })
     }
   }
 
-  logout = async (req: AuthRequest, res: Response): Promise<Response> => {
+  public logout = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Not authenticated',
+      if (req.user) {
+        // Log logout action
+        await this.auditService.log({
+          userId: req.user.id,
+          userEmail: req.user.email,
+          userRole: req.user.role,
+          action: 'LOGOUT',
+          entity: 'USER',
+          entityId: req.user.id,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
         })
       }
 
-      // Log logout activity
-      await this.auditLogService.log({
-        userId: req.user.id,
-        userEmail: req.user.email,
-        userRole: req.user.role,
-        action: 'LOGOUT',
-        entity: 'USER',
-        entityId: req.user.id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
       })
 
-      return res.status(200).json({
-        success: true,
-        message: 'Logged out successfully',
-      })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Logout error:', error)
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  public register = async (req: Request, res: Response) => {
+    try {
+      // This would be for admin creating tenants
+      // For now, return not implemented
+      res.status(501).json({
+        success: false,
+        message: 'Registration is not implemented. Use admin panel to create tenants.'
+      })
+
+    } catch (error: any) {
+      console.error('Register error:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
       })
     }
   }
