@@ -6,13 +6,12 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": false,
-    "skipLibCheck": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": false,
-    "noImplicitAny": false  // Change from true to false
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

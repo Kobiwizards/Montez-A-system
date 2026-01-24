@@ -225,9 +225,9 @@ export class TenantController {
 
       // Log tenant creation
       await this.auditLogService.log({
-        userId: (req as AuthenticatedRequest).user?.id,
-        userEmail: (req as AuthenticatedRequest).user?.email,
-        userRole: (req as AuthenticatedRequest).user?.role,
+        userId: (req as Request).user?.id,
+        userEmail: (req as Request).user?.email,
+        userRole: (req as Request).user?.role,
         action: 'CREATE',
         entity: 'TENANT',
         entityId: tenant.id,
@@ -310,9 +310,9 @@ export class TenantController {
 
       // Log tenant update
       await this.auditLogService.log({
-        userId: (req as AuthenticatedRequest).user?.id,
-        userEmail: (req as AuthenticatedRequest).user?.email,
-        userRole: (req as AuthenticatedRequest).user?.role,
+        userId: (req as Request).user?.id,
+        userEmail: (req as Request).user?.email,
+        userRole: (req as Request).user?.role,
         action: 'UPDATE',
         entity: 'TENANT',
         entityId: tenant.id,
@@ -366,9 +366,9 @@ export class TenantController {
 
       // Log tenant deletion
       await this.auditLogService.log({
-        userId: (req as AuthenticatedRequest).user?.id,
-        userEmail: (req as AuthenticatedRequest).user?.email,
-        userRole: (req as AuthenticatedRequest).user?.role,
+        userId: (req as Request).user?.id,
+        userEmail: (req as Request).user?.email,
+        userRole: (req as Request).user?.role,
         action: 'DELETE',
         entity: 'TENANT',
         entityId: tenant.id,
@@ -525,9 +525,9 @@ export class TenantController {
 
       // Log balance update
       await this.auditLogService.log({
-        userId: (req as AuthenticatedRequest).user?.id,
-        userEmail: (req as AuthenticatedRequest).user?.email,
-        userRole: (req as AuthenticatedRequest).user?.role,
+        userId: (req as Request).user?.id,
+        userEmail: (req as Request).user?.email,
+        userRole: (req as Request).user?.role,
         action: 'UPDATE',
         entity: 'TENANT',
         entityId: tenant.id,

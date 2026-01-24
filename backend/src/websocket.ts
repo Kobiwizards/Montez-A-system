@@ -43,12 +43,12 @@ export class WebSocketService {
           }
         } catch (error: any) {
           console.log('❌ WebSocket authentication failed:', error.message)
-          ws.close(1008, 'Authentication failed')
+          (ws as WebSocket).close(1008, 'Authentication failed')
           return
         }
       }
 
-      ws.on('message', (data: WebSocket.RawData) => {
+      (ws as WebSocket).on('message', (data: WebSocket.RawData) => {
         try {
           const message: WebSocketMessage = JSON.parse(data.toString())
           this.handleMessage(ws, message)
@@ -57,19 +57,19 @@ export class WebSocketService {
         }
       })
 
-      ws.on('close', () => {
+      (ws as WebSocket).on('close', () => {
         if (ws.userId) {
           this.clients.delete(ws.userId)
           console.log(`🔌 WebSocket disconnected for user: ${ws.userId}`)
         }
       })
 
-      ws.on('error', (error: any) => {
+      (ws as WebSocket).on('error', (error: any) => {
         console.error('❌ WebSocket error:', error)
       })
 
       // Send welcome message
-      ws.send(JSON.stringify({
+      (ws as WebSocket).send(JSON.stringify({
         type: 'welcome',
         data: { message: 'Connected to Montez A WebSocket', timestamp: new Date().toISOString() }
       }))
@@ -79,7 +79,7 @@ export class WebSocketService {
   private handleMessage(ws: AuthenticatedWebSocket, message: WebSocketMessage): void {
     switch (message.type) {
       case 'ping':
-        ws.send(JSON.stringify({ type: 'pong', data: { timestamp: new Date().toISOString() } }))
+        (ws as WebSocket).send(JSON.stringify({ type: 'pong', data: { timestamp: new Date().toISOString() } }))
         break
 
       case 'subscribe':
