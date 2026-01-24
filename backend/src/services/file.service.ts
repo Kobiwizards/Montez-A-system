@@ -3,6 +3,19 @@ import path from 'path'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 
+// Simple interface for file
+interface UploadedFile {
+  fieldname: string
+  originalname: string
+  encoding: string
+  mimetype: string
+  size: number
+  destination: string
+  filename: string
+  path: string
+  buffer: Buffer
+}
+
 export class FileService {
   private uploadDir = process.env.UPLOAD_DIR || './uploads'
   private receiptDir = process.env.RECEIPT_DIR || './receipts'
@@ -21,16 +34,16 @@ export class FileService {
   }
 
   private storage = multer.diskStorage({
-    destination: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+    destination: (req: any, file: UploadedFile, cb: (error: Error | null, destination: string) => void) => {
       cb(null, this.uploadDir)
     },
-    filename: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    filename: (req: any, file: UploadedFile, cb: (error: Error | null, filename: string) => void) => {
       const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`
       cb(null, uniqueName)
     }
   })
 
-  private fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  private fileFilter = (req: any, file: UploadedFile, cb: multer.FileFilterCallback) => {
     const allowedTypes = /jpeg|jpg|png|gif|pdf/
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase())
     const mimetype = allowedTypes.test(file.mimetype)
@@ -52,8 +65,7 @@ export class FileService {
     })
   }
 
-  // ADD THIS METHOD
-  public async saveFile(file: Express.Multer.File, subdirectory: string): Promise<string> {
+  public async saveFile(file: UploadedFile, subdirectory: string): Promise<string> {
     const dir = path.join(this.uploadDir, subdirectory)
     
     if (!fs.existsSync(dir)) {

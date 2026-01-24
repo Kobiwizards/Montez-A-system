@@ -1,5 +1,3 @@
-import { AuthenticatedRequest } from '../middleware/auth.middleware'
-import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import bcrypt from "bcryptjs"
 import { prisma } from '../lib/prisma'
@@ -392,7 +390,7 @@ export class TenantController {
     }
   }
 
-  getTenantDashboard = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  getTenantDashboard = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({

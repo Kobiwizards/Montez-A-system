@@ -1,5 +1,3 @@
-import { AuthenticatedRequest } from '../middleware/auth.middleware'
-import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { ReceiptService } from '../services/receipt.service'
@@ -163,7 +161,7 @@ export class ReceiptController {
     }
   }
 
-  generateReceipt = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  generateReceipt = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -263,7 +261,7 @@ export class ReceiptController {
     }
   }
 
-  getTenantReceipts = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  getTenantReceipts = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -402,7 +400,7 @@ export class ReceiptController {
     }
   }
 
-  deleteReceipt = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  deleteReceipt = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({

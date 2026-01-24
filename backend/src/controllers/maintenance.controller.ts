@@ -1,5 +1,3 @@
-import { AuthenticatedRequest } from '../middleware/auth.middleware'
-import { AuthenticatedRequest } from '../types'
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { AuditLogService } from '../services/audit.service'
@@ -17,7 +15,7 @@ export class MaintenanceController {
     this.fileService = new FileService()
   }
 
-  createRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  createRequest = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -188,7 +186,7 @@ export class MaintenanceController {
     }
   }
 
-  getRequestById = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  getRequestById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params
 
@@ -235,7 +233,7 @@ export class MaintenanceController {
     }
   }
 
-  updateRequestStatus = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  updateRequestStatus = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -313,7 +311,7 @@ export class MaintenanceController {
     }
   }
 
-  updateRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  updateRequest = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -371,7 +369,7 @@ export class MaintenanceController {
     }
   }
 
-  deleteRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  deleteRequest = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user || req.user.role !== 'ADMIN') {
         return res.status(403).json({
@@ -434,7 +432,7 @@ export class MaintenanceController {
     }
   }
 
-  getTenantRequests = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  getTenantRequests = async (req: Request, res: Response): Promise<Response> => {
     try {
       if (!req.user) {
         return res.status(401).json({

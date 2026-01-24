@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { format } from 'date-fns'
 
+// Use any type for PDFDocument to avoid type issues
 interface ReceiptData {
   receiptNumber: string
   tenantName: string
@@ -30,7 +31,7 @@ export class ReceiptService {
         const filename = `${data.receiptNumber}.pdf`
         const filePath = path.join(this.receiptDir, filename)
         
-        const doc = new PDFDocument({
+        const doc: any = new PDFDocument({
           size: 'A4',
           margin: 50,
           info: {
@@ -65,7 +66,7 @@ export class ReceiptService {
     })
   }
 
-  private addHeader(doc: PDFKit.PDFDocument, data: ReceiptData): void {
+  private addHeader(doc: any, data: ReceiptData): void {
     // Logo or title
     doc.fontSize(24)
        .font('Helvetica-Bold')
@@ -90,7 +91,7 @@ export class ReceiptService {
     doc.moveDown(2)
   }
 
-  private addReceiptDetails(doc: PDFKit.PDFDocument, data: ReceiptData): void {
+  private addReceiptDetails(doc: any, data: ReceiptData): void {
     doc.fontSize(12)
        .font('Helvetica')
        .text('RECEIPT DETAILS', { underline: true })
@@ -113,7 +114,7 @@ export class ReceiptService {
     doc.moveDown()
   }
 
-  private addPaymentDetails(doc: PDFKit.PDFDocument, data: ReceiptData): void {
+  private addPaymentDetails(doc: any, data: ReceiptData): void {
     doc.fontSize(14)
        .font('Helvetica-Bold')
        .text('PAYMENT SUMMARY', { underline: true })
@@ -134,7 +135,7 @@ export class ReceiptService {
     doc.moveDown(2)
   }
 
-  private addFooter(doc: PDFKit.PDFDocument): void {
+  private addFooter(doc: any): void {
     doc.moveDown(4)
     doc.fontSize(10)
        .font('Helvetica')
