@@ -9,8 +9,8 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const date_fns_1 = require("date-fns");
 class ReceiptService {
+    receiptDir = process.env.RECEIPT_DIR || './receipts';
     constructor() {
-        this.receiptDir = process.env.RECEIPT_DIR || './receipts';
         if (!fs_1.default.existsSync(this.receiptDir)) {
             fs_1.default.mkdirSync(this.receiptDir, { recursive: true });
         }

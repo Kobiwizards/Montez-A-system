@@ -1,9 +1,10 @@
-import { Request } from 'express';
-import { User } from '@prisma/client';
+import { Request } from 'express'
+import { User } from '@prisma/client'
 
 // Main AuthRequest type that properly extends Express Request
 export interface AuthRequest extends Request {
-  user?: User;
+  user?: User
+  userId?: string
 }
 
 // Common types

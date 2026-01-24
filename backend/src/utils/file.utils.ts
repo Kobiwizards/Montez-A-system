@@ -3,7 +3,7 @@ import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 
 export class FileUtils {
-  static validateFile(file: Express.Express.Multer.File): { valid: boolean; error?: string } {
+  static validateFile(file: Express.Multer.File): { valid: boolean; error?: string } {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf']
     const maxSize = 5 * 1024 * 1024 // 5MB
 
@@ -32,7 +32,7 @@ export class FileUtils {
     return `${basename}-${timestamp}-${uniqueId}${ext}`
   }
 
-  static async saveFile(file: Express.Express.Multer.File, destination: string): Promise<string> {
+  static async saveFile(file: Express.Multer.File, destination: string): Promise<string> {
     const filename = this.generateUniqueFilename(file.originalname)
     const filePath = path.join(destination, filename)
 

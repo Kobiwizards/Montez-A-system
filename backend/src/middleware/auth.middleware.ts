@@ -99,16 +99,16 @@ export const authorize = (...roles: string[]) => {
 
 export const refreshToken = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body
+    const { refreshToken: refreshTokenFromBody } = req.body
 
-    if (!refreshToken) {
+    if (!refreshTokenFromBody) {
       return res.status(400).json({
         success: false,
         message: 'Refresh token required'
       })
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as any
+    const decoded = jwt.verify(refreshTokenFromBody, process.env.JWT_REFRESH_SECRET!) as any
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId }
@@ -121,17 +121,17 @@ export const refreshToken = async (req: Request, res: Response) => {
       })
     }
 
-    // Generate new tokens
+    // Generate new tokens - FIXED: Cast expiresIn to correct type
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'] }
     )
 
     const newRefreshToken = jwt.sign(
       { userId: user.id },
       process.env.JWT_REFRESH_SECRET!,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+      { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') as jwt.SignOptions['expiresIn'] }
     )
 
     res.json({

@@ -5,124 +5,114 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.refreshToken = exports.authorize = exports.authenticate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const config_1 = require("../config");
 const prisma_1 = require("../lib/prisma");
 const authenticate = async (req, res, next) => {
     try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-            res.status(401).json({
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
                 success: false,
-                message: 'No token provided',
+                message: 'No token provided'
             });
-            return;
         }
-        const decoded = jsonwebtoken_1.default.verify(token, config_1.config.jwtSecret);
+        const token = authHeader.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+        // Verify token
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        // Get user from database
         const user = await prisma_1.prisma.user.findUnique({
-            where: { id: decoded.id },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true,
-                apartment: true,
-                unitType: true,
-                rentAmount: true,
-                balance: true,
-                status: true,
-            },
+            where: { id: decoded.userId }
         });
         if (!user) {
-            res.status(401).json({
+            return res.status(401).json({
                 success: false,
-                message: 'User not found',
+                message: 'User not found'
             });
-            return;
         }
-        // Add user to request
-        ;
+        // Attach user to request
         req.user = user;
+        req.userId = user.id;
         next();
     }
     catch (error) {
-        console.error('Authentication error:', error);
-        res.status(401).json({
+        console.error('Authentication error:', error.message);
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Token expired'
+            });
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token'
+            });
+        }
+        return res.status(401).json({
             success: false,
-            message: 'Invalid token',
+            message: 'Authentication failed'
         });
     }
 };
 exports.authenticate = authenticate;
-const authorize = (roles) => {
+const authorize = (...roles) => {
     return (req, res, next) => {
-        const user = req.user;
-        if (!user) {
-            res.status(401).json({
+        if (!req.user) {
+            return res.status(401).json({
                 success: false,
-                message: 'Not authenticated',
+                message: 'Not authenticated'
             });
-            return;
         }
-        const allowedRoles = Array.isArray(roles) ? roles : [roles];
-        if (!allowedRoles.includes(user.role)) {
-            res.status(403).json({
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
                 success: false,
-                message: 'Insufficient permissions',
+                message: 'Not authorized'
             });
-            return;
         }
         next();
     };
 };
 exports.authorize = authorize;
-// Refresh token middleware
-const refreshToken = async (req, res, next) => {
+const refreshToken = async (req, res) => {
     try {
-        const { refreshToken } = req.body;
-        if (!refreshToken) {
-            res.status(401).json({
+        const { refreshToken: refreshTokenFromBody } = req.body;
+        if (!refreshTokenFromBody) {
+            return res.status(400).json({
                 success: false,
-                message: 'No refresh token provided',
+                message: 'Refresh token required'
             });
-            return;
         }
-        const decoded = jsonwebtoken_1.default.verify(refreshToken, config_1.config.jwtSecret);
+        const decoded = jsonwebtoken_1.default.verify(refreshTokenFromBody, process.env.JWT_REFRESH_SECRET);
         const user = await prisma_1.prisma.user.findUnique({
-            where: { id: decoded.id },
+            where: { id: decoded.userId }
         });
         if (!user) {
-            res.status(401).json({
+            return res.status(401).json({
                 success: false,
-                message: 'Invalid refresh token',
+                message: 'User not found'
             });
-            return;
         }
-        // Generate new tokens - FIXED: Use string literals for expiresIn
-        const newToken = jsonwebtoken_1.default.sign({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            apartment: user.apartment,
-        }, config_1.config.jwtSecret, { expiresIn: '7d' } // Fixed: Use string literal directly
-        );
-        const newRefreshToken = jsonwebtoken_1.default.sign({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-        }, config_1.config.jwtSecret, { expiresIn: '30d' } // Fixed: Use string literal directly
-        );
-        req.user = user;
-        req.tokens = {
-            token: newToken,
-            refreshToken: newRefreshToken,
-        };
-        next();
+        // Generate new tokens - FIXED: Cast expiresIn to correct type
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') });
+        const newRefreshToken = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') });
+        res.json({
+            success: true,
+            data: {
+                token,
+                refreshToken: newRefreshToken
+            }
+        });
     }
     catch (error) {
-        console.error('Refresh token error:', error);
+        console.error('Refresh token error:', error.message);
         res.status(401).json({
             success: false,
-            message: 'Invalid refresh token',
+            message: 'Invalid refresh token'
         });
     }
 };

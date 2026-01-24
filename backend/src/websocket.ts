@@ -1,4 +1,4 @@
-import WebSocket, { WebSocketServer } from 'ws'
+import WebSocket, { WebSocketServer, RawData } from 'ws'
 import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
 
@@ -26,10 +26,11 @@ export class WebSocketService {
 
   private setupWebSocket(): void {
     this.wss.on('connection', (ws: AuthenticatedWebSocket, request: any) => {
-      console.log('üîå New WebSocket connection')
+      console.log('Ì¥å New WebSocket connection')
 
       // Extract token from query parameters
-      const token = new URL(request.url, `http://${request.headers.host}`).searchParams.get('token')
+      const url = request.url ? new URL(request.url, `http://${request.headers.host}`) : null
+      const token = url ? url.searchParams.get('token') : null
 
       if (token) {
         try {
@@ -42,13 +43,13 @@ export class WebSocketService {
             console.log(`‚úÖ WebSocket authenticated for user: ${ws.userId}`)
           }
         } catch (error: any) {
-          console.log('‚ùå WebSocket authentication failed:', error.message)
-          (ws as WebSocket).close(1008, 'Authentication failed')
+          console.log('‚ùå WebSocket authentication failed:', error.message);
+          ws.close(1008, 'Authentication failed')
           return
         }
       }
 
-      (ws as WebSocket).on('message', (data: WebSocket.RawData) => {
+      ws.on('message', (data: RawData) => {
         try {
           const message: WebSocketMessage = JSON.parse(data.toString())
           this.handleMessage(ws, message)
@@ -57,19 +58,19 @@ export class WebSocketService {
         }
       })
 
-      (ws as WebSocket).on('close', () => {
+      ws.on('close', () => {
         if (ws.userId) {
           this.clients.delete(ws.userId)
-          console.log(`üîå WebSocket disconnected for user: ${ws.userId}`)
+          console.log(`Ì¥å WebSocket disconnected for user: ${ws.userId}`)
         }
       })
 
-      (ws as WebSocket).on('error', (error: any) => {
+      ws.on('error', (error: any) => {
         console.error('‚ùå WebSocket error:', error)
       })
 
       // Send welcome message
-      (ws as WebSocket).send(JSON.stringify({
+      ws.send(JSON.stringify({
         type: 'welcome',
         data: { message: 'Connected to Montez A WebSocket', timestamp: new Date().toISOString() }
       }))
@@ -79,7 +80,7 @@ export class WebSocketService {
   private handleMessage(ws: AuthenticatedWebSocket, message: WebSocketMessage): void {
     switch (message.type) {
       case 'ping':
-        (ws as WebSocket).send(JSON.stringify({ type: 'pong', data: { timestamp: new Date().toISOString() } }))
+        ws.send(JSON.stringify({ type: 'pong', data: { timestamp: new Date().toISOString() } }))   
         break
 
       case 'subscribe':
@@ -92,14 +93,14 @@ export class WebSocketService {
         break
 
       default:
-        console.log('üì® Unknown message type:', message.type)
+        console.log('Ì≥® Unknown message type:', message.type)
     }
   }
 
   private handleSubscription(ws: AuthenticatedWebSocket, data: any): void {
     // Implement subscription logic based on user role and requested channels
     const channels = data.channels || []
-    console.log(`üì° User ${ws.userId} subscribed to channels:`, channels)
+    console.log(`Ì≥° User ${ws.userId} subscribed to channels:`, channels)
   }
 
   public sendToUser(userId: string, message: WebSocketMessage): void {

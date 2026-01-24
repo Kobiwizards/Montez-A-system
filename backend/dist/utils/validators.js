@@ -3,6 +3,53 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Validators = void 0;
 const zod_1 = require("zod");
 class Validators {
+    static email = zod_1.z.string().email('Invalid email address');
+    static phone = zod_1.z.string().regex(/^(\+254|0)[17]\d{8}$/, 'Invalid Kenyan phone number. Format: +2547XXXXXXXX or 07XXXXXXXX');
+    static password = zod_1.z.string()
+        .min(6, 'Password must be at least 6 characters')
+        .max(100, 'Password must be less than 100 characters')
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number');
+    static username = zod_1.z.string()
+        .min(2, 'Name must be at least 2 characters')
+        .max(100, 'Name must be less than 100 characters')
+        .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
+    static apartmentNumber = zod_1.z.string()
+        .regex(/^[1-6][AB][12]$/, 'Invalid apartment number. Format: 1A1, 2B2, etc.');
+    static amount = zod_1.z.number()
+        .positive('Amount must be positive')
+        .max(1000000, 'Amount is too large');
+    static month = zod_1.z.string()
+        .regex(/^\d{4}-\d{2}$/, 'Month must be in YYYY-MM format')
+        .refine((val) => {
+        const monthNum = parseInt(val.split('-')[1]);
+        return monthNum >= 1 && monthNum <= 12;
+    }, 'Month must be between 01 and 12');
+    static date = zod_1.z.string()
+        .refine((val) => !isNaN(Date.parse(val)), 'Invalid date format');
+    static transactionCode = zod_1.z.string()
+        .regex(/^[A-Z0-9]{8,12}$/, 'Invalid transaction code format')
+        .optional();
+    static caretakerName = zod_1.z.string()
+        .min(2, 'Caretaker name must be at least 2 characters')
+        .max(100, 'Caretaker name must be less than 100 characters')
+        .optional();
+    static description = zod_1.z.string()
+        .max(500, 'Description must be less than 500 characters')
+        .optional();
+    static notes = zod_1.z.string()
+        .max(1000, 'Notes must be less than 1000 characters')
+        .optional();
+    static emergencyContact = zod_1.z.string()
+        .regex(/^(\+254|0)[17]\d{8}$/, 'Invalid emergency contact number')
+        .optional();
+    static waterReading = zod_1.z.number()
+        .int('Reading must be a whole number')
+        .nonnegative('Reading cannot be negative')
+        .max(10000, 'Reading is too large');
+    static fileSize = (maxSize) => zod_1.z.instanceof(Buffer)
+        .refine((buf) => buf.length <= maxSize, `File size must be less than ${maxSize / 1024 / 1024}MB`);
+    static fileType = (allowedTypes) => zod_1.z.string()
+        .refine((type) => allowedTypes.includes(type), `File type must be one of: ${allowedTypes.join(', ')}`);
     static validateKenyanID(id) {
         // Basic Kenyan ID validation (simplified)
         const regex = /^\d{8,9}$/;
@@ -164,50 +211,3 @@ class Validators {
     }
 }
 exports.Validators = Validators;
-Validators.email = zod_1.z.string().email('Invalid email address');
-Validators.phone = zod_1.z.string().regex(/^(\+254|0)[17]\d{8}$/, 'Invalid Kenyan phone number. Format: +2547XXXXXXXX or 07XXXXXXXX');
-Validators.password = zod_1.z.string()
-    .min(6, 'Password must be at least 6 characters')
-    .max(100, 'Password must be less than 100 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number');
-Validators.username = zod_1.z.string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name must be less than 100 characters')
-    .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
-Validators.apartmentNumber = zod_1.z.string()
-    .regex(/^[1-6][AB][12]$/, 'Invalid apartment number. Format: 1A1, 2B2, etc.');
-Validators.amount = zod_1.z.number()
-    .positive('Amount must be positive')
-    .max(1000000, 'Amount is too large');
-Validators.month = zod_1.z.string()
-    .regex(/^\d{4}-\d{2}$/, 'Month must be in YYYY-MM format')
-    .refine((val) => {
-    const monthNum = parseInt(val.split('-')[1]);
-    return monthNum >= 1 && monthNum <= 12;
-}, 'Month must be between 01 and 12');
-Validators.date = zod_1.z.string()
-    .refine((val) => !isNaN(Date.parse(val)), 'Invalid date format');
-Validators.transactionCode = zod_1.z.string()
-    .regex(/^[A-Z0-9]{8,12}$/, 'Invalid transaction code format')
-    .optional();
-Validators.caretakerName = zod_1.z.string()
-    .min(2, 'Caretaker name must be at least 2 characters')
-    .max(100, 'Caretaker name must be less than 100 characters')
-    .optional();
-Validators.description = zod_1.z.string()
-    .max(500, 'Description must be less than 500 characters')
-    .optional();
-Validators.notes = zod_1.z.string()
-    .max(1000, 'Notes must be less than 1000 characters')
-    .optional();
-Validators.emergencyContact = zod_1.z.string()
-    .regex(/^(\+254|0)[17]\d{8}$/, 'Invalid emergency contact number')
-    .optional();
-Validators.waterReading = zod_1.z.number()
-    .int('Reading must be a whole number')
-    .nonnegative('Reading cannot be negative')
-    .max(10000, 'Reading is too large');
-Validators.fileSize = (maxSize) => zod_1.z.instanceof(Buffer)
-    .refine((buf) => buf.length <= maxSize, `File size must be less than ${maxSize / 1024 / 1024}MB`);
-Validators.fileType = (allowedTypes) => zod_1.z.string()
-    .refine((type) => allowedTypes.includes(type), `File type must be one of: ${allowedTypes.join(', ')}`);

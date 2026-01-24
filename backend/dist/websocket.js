@@ -41,17 +41,20 @@ const ws_1 = __importStar(require("ws"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const client_1 = require("@prisma/client");
 class WebSocketService {
+    wss;
+    clients = new Map();
+    prisma;
     constructor(server) {
-        this.clients = new Map();
         this.wss = new ws_1.WebSocketServer({ server });
         this.prisma = new client_1.PrismaClient();
         this.setupWebSocket();
     }
     setupWebSocket() {
         this.wss.on('connection', (ws, request) => {
-            console.log('🔌 New WebSocket connection');
+            console.log('��� New WebSocket connection');
             // Extract token from query parameters
-            const token = new URL(request.url, `http://${request.headers.host}`).searchParams.get('token');
+            const url = request.url ? new URL(request.url, `http://${request.headers.host}`) : null;
+            const token = url ? url.searchParams.get('token') : null;
             if (token) {
                 try {
                     const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
@@ -80,7 +83,7 @@ class WebSocketService {
             ws.on('close', () => {
                 if (ws.userId) {
                     this.clients.delete(ws.userId);
-                    console.log(`🔌 WebSocket disconnected for user: ${ws.userId}`);
+                    console.log(`��� WebSocket disconnected for user: ${ws.userId}`);
                 }
             });
             ws.on('error', (error) => {
@@ -106,13 +109,13 @@ class WebSocketService {
                 // Handle unsubscription requests
                 break;
             default:
-                console.log('📨 Unknown message type:', message.type);
+                console.log('��� Unknown message type:', message.type);
         }
     }
     handleSubscription(ws, data) {
         // Implement subscription logic based on user role and requested channels
         const channels = data.channels || [];
-        console.log(`📡 User ${ws.userId} subscribed to channels:`, channels);
+        console.log(`��� User ${ws.userId} subscribed to channels:`, channels);
     }
     sendToUser(userId, message) {
         const client = this.clients.get(userId);

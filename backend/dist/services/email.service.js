@@ -7,8 +7,8 @@ exports.EmailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const config_1 = require("../config");
 class EmailService {
+    transporter = null;
     constructor() {
-        this.transporter = null;
         this.initializeTransporter();
     }
     initializeTransporter() {

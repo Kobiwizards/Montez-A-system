@@ -9,29 +9,9 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
 class FileService {
+    uploadDir = process.env.UPLOAD_DIR || './uploads';
+    receiptDir = process.env.RECEIPT_DIR || './receipts';
     constructor() {
-        this.uploadDir = process.env.UPLOAD_DIR || './uploads';
-        this.receiptDir = process.env.RECEIPT_DIR || './receipts';
-        this.storage = multer_1.default.diskStorage({
-            destination: (req, file, cb) => {
-                cb(null, this.uploadDir);
-            },
-            filename: (req, file, cb) => {
-                const uniqueName = `${(0, uuid_1.v4)()}-${Date.now()}${path_1.default.extname(file.originalname)}`;
-                cb(null, uniqueName);
-            }
-        });
-        this.fileFilter = (req, file, cb) => {
-            const allowedTypes = /jpeg|jpg|png|gif|pdf/;
-            const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
-            const mimetype = allowedTypes.test(file.mimetype);
-            if (mimetype && extname) {
-                return cb(null, true);
-            }
-            else {
-                cb(new Error('Only images and PDFs are allowed'));
-            }
-        };
         this.ensureDirectoriesExist();
     }
     ensureDirectoriesExist() {
@@ -42,6 +22,26 @@ class FileService {
             fs_1.default.mkdirSync(this.receiptDir, { recursive: true });
         }
     }
+    storage = multer_1.default.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, this.uploadDir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueName = `${(0, uuid_1.v4)()}-${Date.now()}${path_1.default.extname(file.originalname)}`;
+            cb(null, uniqueName);
+        }
+    });
+    fileFilter = (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|pdf/;
+        const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        else {
+            cb(new Error('Only images and PDFs are allowed'));
+        }
+    };
     getMulterConfig() {
         return (0, multer_1.default)({
             storage: this.storage,
@@ -51,7 +51,6 @@ class FileService {
             }
         });
     }
-    // ADD THIS METHOD
     async saveFile(file, subdirectory) {
         const dir = path_1.default.join(this.uploadDir, subdirectory);
         if (!fs_1.default.existsSync(dir)) {

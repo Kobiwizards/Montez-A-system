@@ -1,16 +1,15 @@
-import { AuthenticatedRequest } from '../middleware/auth.middleware'
 import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
-import { AuthenticatedRequest } from '../middleware/auth.middleware'
-import { AuditService } from '../services/audit.service'
+import { AuthRequest } from '../types'
+import { AuditLogService } from '../services/audit.service'
 
 export class AuthController {
-  private auditService: AuditService
+  private auditService: AuditLogService
 
   constructor() {
-    this.auditService = new AuditService()
+    this.auditService = new AuditLogService()
   }
 
   public login = async (req: Request, res: Response) => {
@@ -46,17 +45,17 @@ export class AuthController {
         })
       }
 
-      // Generate tokens
+      // Generate tokens - FIXED: Cast expiresIn to the correct type
       const token = jwt.sign(
         { userId: user.id, role: user.role },
         process.env.JWT_SECRET!,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'] }
       )
 
       const refreshToken = jwt.sign(
         { userId: user.id },
         process.env.JWT_REFRESH_SECRET!,
-        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+        { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') as jwt.SignOptions['expiresIn'] }
       )
 
       // Prepare user response (without password)
@@ -110,7 +109,7 @@ export class AuthController {
     }
   }
 
-  public getProfile = async (req: AuthenticatedRequest, res: Response) => {
+  public getProfile = async (req: AuthRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -154,7 +153,7 @@ export class AuthController {
     }
   }
 
-  public updateProfile = async (req: AuthenticatedRequest, res: Response) => {
+  public updateProfile = async (req: AuthRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -163,7 +162,9 @@ export class AuthController {
         })
       }
 
-      const { name, phone, emergencyContact } = req.body
+      // Use type assertion to access Request properties
+      const request = req as Request & { user?: any; userId?: string }
+      const { name, phone, emergencyContact } = request.body
 
       const updatedUser = await prisma.user.update({
         where: { id: req.user.id },
@@ -182,8 +183,8 @@ export class AuthController {
         action: 'UPDATE',
         entity: 'USER',
         entityId: req.user.id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
+        ipAddress: request.ip,
+        userAgent: request.get('user-agent')
       })
 
       // Return updated user (without password)
@@ -222,7 +223,7 @@ export class AuthController {
     }
   }
 
-  public changePassword = async (req: AuthenticatedRequest, res: Response) => {
+  public changePassword = async (req: AuthRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({
@@ -231,7 +232,9 @@ export class AuthController {
         })
       }
 
-      const { currentPassword, newPassword } = req.body
+      // Use type assertion to access Request properties
+      const request = req as Request & { user?: any; userId?: string }
+      const { currentPassword, newPassword } = request.body
 
       if (!currentPassword || !newPassword) {
         return res.status(400).json({
@@ -266,8 +269,8 @@ export class AuthController {
         action: 'CHANGE_PASSWORD',
         entity: 'USER',
         entityId: req.user.id,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
+        ipAddress: request.ip,
+        userAgent: request.get('user-agent')
       })
 
       res.json({
@@ -284,9 +287,11 @@ export class AuthController {
     }
   }
 
-  public logout = async (req: AuthenticatedRequest, res: Response) => {
+  public logout = async (req: AuthRequest, res: Response) => {
     try {
       if (req.user) {
+        // Use type assertion to access Request properties
+        const request = req as Request & { user?: any; userId?: string }
         // Log logout action
         await this.auditService.log({
           userId: req.user.id,
@@ -295,8 +300,8 @@ export class AuthController {
           action: 'LOGOUT',
           entity: 'USER',
           entityId: req.user.id,
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent')
+          ipAddress: request.ip,
+          userAgent: request.get('user-agent')
         })
       }
 
@@ -332,4 +337,3 @@ export class AuthController {
     }
   }
 }
-export { AuthController }

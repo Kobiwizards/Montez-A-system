@@ -175,13 +175,13 @@ export class PaymentController {
       
       // Check if files exist and handle both array and object types
       if (req.files) {
-        let filesArray: Express.Express.Multer.File[] = []
+        let filesArray: Express.Multer.File[] = []
         
         if (Array.isArray(req.files)) {
           filesArray = req.files
         } else if (typeof req.files === "object") {
           // Convert object of arrays to single array
-          const filesObj = req.files as { [fieldname: string]: Express.Express.Multer.File[] }
+          const filesObj = req.files as { [fieldname: string]: Express.Multer.File[] }
           filesArray = Object.values(filesObj).flat()
         }
         
