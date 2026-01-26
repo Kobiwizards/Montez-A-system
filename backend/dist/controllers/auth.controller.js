@@ -8,6 +8,34 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma_1 = require("../lib/prisma");
 const audit_service_1 = require("../services/audit.service");
+// JWT Configuration with proper types
+const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-change-in-production';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-key-change-in-production';
+// Convert string expiresIn to proper type
+const getJwtExpiresIn = () => {
+    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    // Convert string like "7d" to seconds if needed
+    if (expiresIn.endsWith('d')) {
+        const days = parseInt(expiresIn);
+        return days * 24 * 60 * 60; // Convert days to seconds
+    }
+    if (expiresIn.endsWith('h')) {
+        const hours = parseInt(expiresIn);
+        return hours * 60 * 60; // Convert hours to seconds
+    }
+    return expiresIn; // Return as-is if it's already in seconds format
+};
+const getRefreshExpiresIn = () => {
+    const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+    if (expiresIn.endsWith('d')) {
+        const days = parseInt(expiresIn);
+        return days * 24 * 60 * 60;
+    }
+    return expiresIn;
+};
+// Or simpler: use string values directly (jwt accepts strings)
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 class AuthController {
     auditService;
     constructor() {
@@ -40,9 +68,9 @@ class AuthController {
                     message: 'Invalid credentials'
                 });
             }
-            // Generate tokens
-            const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') });
-            const refreshToken = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') });
+            // Generate tokens - FIXED: Cast expiresIn to correct type
+            const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+            const refreshToken = jsonwebtoken_1.default.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN });
             // Prepare user response (without password)
             const userResponse = {
                 id: user.id,
@@ -74,13 +102,12 @@ class AuthController {
                 ipAddress: req.ip,
                 userAgent: req.get('user-agent')
             });
+            // Return consistent format with success: true
             res.json({
                 success: true,
-                data: {
-                    token,
-                    refreshToken,
-                    user: userResponse
-                }
+                token,
+                refreshToken,
+                user: userResponse
             });
         }
         catch (error) {
@@ -88,6 +115,42 @@ class AuthController {
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
+            });
+        }
+    };
+    refreshToken = async (req, res) => {
+        try {
+            const { refreshToken: refreshTokenFromBody } = req.body;
+            if (!refreshTokenFromBody) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Refresh token required'
+                });
+            }
+            const decoded = jsonwebtoken_1.default.verify(refreshTokenFromBody, JWT_REFRESH_SECRET);
+            const user = await prisma_1.prisma.user.findUnique({
+                where: { id: decoded.userId }
+            });
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+            // Generate new tokens - FIXED: Cast expiresIn
+            const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+            const newRefreshToken = jsonwebtoken_1.default.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN });
+            res.json({
+                success: true,
+                token,
+                refreshToken: newRefreshToken
+            });
+        }
+        catch (error) {
+            console.error('Refresh token error:', error.message);
+            res.status(401).json({
+                success: false,
+                message: 'Invalid refresh token'
             });
         }
     };
@@ -286,6 +349,34 @@ class AuthController {
         }
         catch (error) {
             console.error('Register error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    };
+    verifyToken = async (req, res) => {
+        try {
+            if (!req.user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid token'
+                });
+            }
+            res.json({
+                success: true,
+                message: 'Token is valid',
+                user: {
+                    id: req.user.id,
+                    email: req.user.email,
+                    name: req.user.name,
+                    role: req.user.role,
+                    apartment: req.user.apartment
+                }
+            });
+        }
+        catch (error) {
+            console.error('Verify token error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'

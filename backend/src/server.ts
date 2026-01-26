@@ -23,10 +23,9 @@ async function startServer() {
     new WebSocketService(server)
 
     server.listen(PORT, () => {
-      console.log(`��� Server running on port ${PORT}`)
-      console.log(`��� API Documentation: http://localhost:${PORT}/api-docs`)
-      console.log(`��� Environment: ${config.nodeEnv}`)
-      console.log(`��� CORS Origin: ${config.corsOrigins[0]}`)
+      console.log(`🚀 Server running on port ${PORT}`)
+      console.log(`🌍 Environment: ${config.nodeEnv}`)
+      console.log(`🔗 CORS Origin: ${config.corsOrigins[0]}`)
     })
 
     // Setup automated tasks
@@ -34,13 +33,13 @@ async function startServer() {
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
-      console.log('��� Received shutdown signal')
+      console.log('🛑 Received shutdown signal')
       
       server.close(async () => {
-        console.log('��� HTTP server closed')
+        console.log('🛑 HTTP server closed')
         
         await prisma.$disconnect()
-        console.log('��� Database connection closed')
+        console.log('🛑 Database connection closed')
         
         process.exit(0)
       })
@@ -62,35 +61,46 @@ async function startServer() {
 }
 
 function setupAutomatedTasks() {
-  console.log('��� Setting up automated tasks...')
+  console.log('🔄 Setting up automated tasks...')
   
-  // Daily analytics snapshot at 1 AM
-  const scheduleAnalyticsSnapshot = () => {
-    const now = new Date()
-    const target = new Date(now)
-    target.setHours(1, 0, 0, 0)
-    
-    if (target <= now) {
-      target.setDate(target.getDate() + 1)
-    }
-    
-    const delay = target.getTime() - now.getTime()
-    
-    setTimeout(async () => {
-      try {
-        await analyticsService.generateDailySnapshot()
-        console.log('��� Daily analytics snapshot generated')
-      } catch (error) {
-        console.error('❌ Failed to generate analytics snapshot:', error)
+  // Use setImmediate for daily tasks to avoid timer overflow
+  const scheduleDailyTask = (task: () => Promise<void>, hour: number) => {
+    const runTask = async () => {
+      const now = new Date()
+      const target = new Date(now)
+      target.setHours(hour, 0, 0, 0)
+      
+      if (target <= now) {
+        target.setDate(target.getDate() + 1)
       }
       
-      // Schedule next day
-      scheduleAnalyticsSnapshot()
-    }, delay)
+      const delay = Math.min(target.getTime() - now.getTime(), 2147483647) // Max 24.8 days
+      
+      setTimeout(async () => {
+        try {
+          await task()
+        } catch (error) {
+          console.error('Task failed:', error)
+        }
+        runTask() // Reschedule
+      }, delay)
+    }
+    
+    runTask()
   }
   
-  // Send payment reminders on 25th of each month at 9 AM
-  const schedulePaymentReminders = () => {
+  // Schedule analytics snapshot at 1 AM
+  scheduleDailyTask(async () => {
+    try {
+      await analyticsService.generateDailySnapshot()
+      console.log('📊 Daily analytics snapshot generated')
+    } catch (error) {
+      console.error('❌ Failed to generate analytics snapshot:', error)
+    }
+  }, 1)
+  
+  // Schedule payment reminders on 25th of each month at 9 AM
+  const scheduleMonthlyTask = () => {
     const now = new Date()
     const target = new Date(now)
     
@@ -100,23 +110,21 @@ function setupAutomatedTasks() {
     target.setDate(25)
     target.setHours(9, 0, 0, 0)
     
-    const delay = target.getTime() - now.getTime()
+    const delay = Math.min(target.getTime() - now.getTime(), 2147483647)
     
     setTimeout(async () => {
       try {
         await analyticsService.sendPaymentReminders()
-        console.log('��� Payment reminders sent')
+        console.log('💰 Payment reminders sent')
       } catch (error) {
         console.error('❌ Failed to send payment reminders:', error)
       }
       
-      // Schedule next month
-      schedulePaymentReminders()
+      scheduleMonthlyTask() // Reschedule
     }, delay)
   }
   
-  scheduleAnalyticsSnapshot()
-  schedulePaymentReminders()
+  scheduleMonthlyTask()
 }
 
 startServer()

@@ -32,7 +32,7 @@ class ApiClient {
       }
     )
 
-    // Response interceptor - FIXED refresh token URL
+    // Response interceptor
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
@@ -45,16 +45,15 @@ class ApiClient {
           try {
             const refreshToken = localStorage.getItem('refreshToken')
             if (refreshToken) {
-              // ✅ FIXED: Backend uses '/auth/refresh-token' not '/auth/refresh'
               const response = await axios.post(`${this.baseURL}/auth/refresh-token`, {
                 refreshToken,
               })
               
               console.log('Refresh token response:', response.data)
               
-              // ✅ Handle backend response format: { success: true, data: { token, refreshToken } }
+              // Handle backend response format: { success: true, token, refreshToken }
               if (response.data.success) {
-                const { token: newToken, refreshToken: newRefreshToken } = response.data.data
+                const { token: newToken, refreshToken: newRefreshToken } = response.data
                 
                 if (newToken) {
                   this.setToken(newToken)
@@ -99,46 +98,23 @@ class ApiClient {
     }
   }
 
-  // Generic request method - UPDATED to handle backend response format
+  // Generic request method - SIMPLIFIED
   async request<T>(config: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await this.client.request<any>(config)
+      const response = await this.client.request(config)
       
       console.log('API Request completed:', {
         url: config.url,
         method: config.method,
-        status: response.status,
-        data: response.data
+        status: response.status
       })
       
-      // Handle the { success, message, data } format from your backend
-      if (response.data && typeof response.data === 'object') {
-        // If response has success field and it's false, throw error
-        if (response.data.success === false) {
-          const errorMessage = response.data.message || 'Request failed'
-          console.error('API request failed with success=false:', errorMessage)
-          throw new Error(errorMessage)
-        }
-        
-        // If response has data field, return it directly
-        // This transforms { success: true, message: "...", data: {...} } to just {...}
-        if (response.data.data !== undefined) {
-          return response.data.data as T
-        }
-      }
-      
-      // Otherwise return the full response
+      // Return the full response data
       return response.data as T
     } catch (error: any) {
       console.error('API request failed:', error)
       console.error('Request URL:', config.url)
       console.error('Base URL:', this.baseURL)
-      console.error('Error response:', error.response?.data)
-      
-      // If it's already an Error object with message, re-throw it
-      if (error instanceof Error) {
-        throw error
-      }
       
       // Handle error response format from backend
       if (error.response?.data) {

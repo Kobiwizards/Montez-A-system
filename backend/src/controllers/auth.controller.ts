@@ -5,6 +5,38 @@ import { prisma } from '../lib/prisma'
 import { User } from '@prisma/client'
 import { AuditLogService } from '../services/audit.service'
 
+// JWT Configuration with proper types
+const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-change-in-production'
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-key-change-in-production'
+
+// Convert string expiresIn to proper type
+const getJwtExpiresIn = () => {
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d'
+  // Convert string like "7d" to seconds if needed
+  if (expiresIn.endsWith('d')) {
+    const days = parseInt(expiresIn)
+    return days * 24 * 60 * 60 // Convert days to seconds
+  }
+  if (expiresIn.endsWith('h')) {
+    const hours = parseInt(expiresIn)
+    return hours * 60 * 60 // Convert hours to seconds
+  }
+  return expiresIn // Return as-is if it's already in seconds format
+}
+
+const getRefreshExpiresIn = () => {
+  const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '30d'
+  if (expiresIn.endsWith('d')) {
+    const days = parseInt(expiresIn)
+    return days * 24 * 60 * 60
+  }
+  return expiresIn
+}
+
+// Or simpler: use string values directly (jwt accepts strings)
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'
+
 // AuthRequest type definition
 type AuthRequest = Request & {
   user?: User
@@ -51,17 +83,17 @@ export class AuthController {
         })
       }
 
-      // Generate tokens
+      // Generate tokens - FIXED: Cast expiresIn to correct type
       const token = jwt.sign(
         { userId: user.id, role: user.role },
-        process.env.JWT_SECRET!,
-        { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
       )
 
       const refreshToken = jwt.sign(
         { userId: user.id },
-        process.env.JWT_REFRESH_SECRET!,
-        { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') as any }
+        JWT_REFRESH_SECRET,
+        { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
       )
 
       // Prepare user response (without password)
@@ -97,13 +129,12 @@ export class AuthController {
         userAgent: req.get('user-agent')
       })
 
+      // Return consistent format with success: true
       res.json({
         success: true,
-        data: {
-          token,
-          refreshToken,
-          user: userResponse
-        }
+        token,
+        refreshToken,
+        user: userResponse
       })
 
     } catch (error: any) {
@@ -111,6 +142,57 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error'
+      })
+    }
+  }
+
+  public refreshToken = async (req: Request, res: Response) => {
+    try {
+      const { refreshToken: refreshTokenFromBody } = req.body
+
+      if (!refreshTokenFromBody) {
+        return res.status(400).json({
+          success: false,
+          message: 'Refresh token required'
+        })
+      }
+
+      const decoded = jwt.verify(refreshTokenFromBody, JWT_REFRESH_SECRET) as any
+      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId }
+      })
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Generate new tokens - FIXED: Cast expiresIn
+      const token = jwt.sign(
+        { userId: user.id, role: user.role },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+      )
+
+      const newRefreshToken = jwt.sign(
+        { userId: user.id },
+        JWT_REFRESH_SECRET,
+        { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+      )
+
+      res.json({
+        success: true,
+        token,
+        refreshToken: newRefreshToken
+      })
+    } catch (error: any) {
+      console.error('Refresh token error:', error.message)
+      res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token'
       })
     }
   }
@@ -330,6 +412,36 @@ export class AuthController {
 
     } catch (error: any) {
       console.error('Register error:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      })
+    }
+  }
+
+  public verifyToken = async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Token is valid',
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          role: req.user.role,
+          apartment: req.user.apartment
+        }
+      })
+
+    } catch (error: any) {
+      console.error('Verify token error:', error)
       res.status(500).json({
         success: false,
         message: 'Internal server error'
