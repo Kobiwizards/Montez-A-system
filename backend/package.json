@@ -4,7 +4,7 @@
   "description": "Backend for Montez A Property Management System",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "npx tsx watch src/server.ts",
     "build": "npx prisma generate && tsc",
     "start": "node dist/server.js",
     "render-build": "npm ci && npx prisma generate && npm run build",
@@ -16,7 +16,7 @@
     "db:deploy": "npx prisma migrate deploy",
     "db:seed": "npx prisma db seed",
     "seed": "npm run db:seed",
-    "db:reset:full": "npx prisma migrate reset --force && npx prisma generate && npm run db:push && npm run db:seed",
+    "db:reset:full": "npx prisma migrate reset --force && npx prisma generate && npx prisma db push && npm run db:seed",
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset --force",
     "lint": "eslint src --ext .ts",
@@ -30,7 +30,7 @@
     "clean": "rm -rf dist node_modules/.cache",
     "prebuild": "npm run clean",
     "prestart": "npm run build",
-    "seed:production": "tsx prisma/seed-production.ts"
+    "seed:production": "npx tsx prisma/seed-production.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.9.1",
@@ -81,7 +81,7 @@
     "npm": ">=9.0.0"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts"
   },
   "keywords": [
     "property-management",
