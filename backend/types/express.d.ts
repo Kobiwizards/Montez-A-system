@@ -1,4 +1,6 @@
-// This file augments the Express types globally
+// Type declaration file - do not import this directly
+// This augments the Express types globally
+
 import { User } from '@prisma/client'
 
 declare global {
@@ -9,3 +11,6 @@ declare global {
     }
   }
 }
+
+// Ensure this file doesn't export anything that could be imported
+export {}

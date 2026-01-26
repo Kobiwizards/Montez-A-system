@@ -1,4 +1,3 @@
-import { AuthRequest } from '../types'
 import { Request, Response, NextFunction } from 'express'
 
 export const errorHandler = (

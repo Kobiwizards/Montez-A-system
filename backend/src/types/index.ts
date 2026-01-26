@@ -1,13 +1,4 @@
-import { Request } from 'express'
-import { User } from '@prisma/client'
-
-// Main AuthRequest type that properly extends Express Request
-export interface AuthRequest extends Request {
-  user?: User
-  userId?: string
-}
-
-// Common types
+// Common types only - no Express imports here
 export interface PaginationParams {
   page?: number;
   limit?: number;

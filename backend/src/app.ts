@@ -1,4 +1,4 @@
-import express from 'express'
+import express from 'express'  // FIXED: Import from 'express' not '../types/express'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
@@ -8,7 +8,7 @@ import { config } from './config'
 import routes from './routes'
 import { errorHandler } from './middleware/error.middleware'
 import { notFoundHandler } from './middleware/not-found.middleware'
-import { corsMiddleware } from './middleware/cors.middleware' // ADD THIS
+import { corsMiddleware } from './middleware/cors.middleware'
 import path from 'path'
 
 export const createApp = () => {

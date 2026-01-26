@@ -40,7 +40,7 @@ class AuthController {
                     message: 'Invalid credentials'
                 });
             }
-            // Generate tokens - FIXED: Cast expiresIn to the correct type
+            // Generate tokens
             const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') });
             const refreshToken = jsonwebtoken_1.default.sign({ userId: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') });
             // Prepare user response (without password)
@@ -140,9 +140,7 @@ class AuthController {
                     message: 'Not authenticated'
                 });
             }
-            // Use type assertion to access Request properties
-            const request = req;
-            const { name, phone, emergencyContact } = request.body;
+            const { name, phone, emergencyContact } = req.body;
             const updatedUser = await prisma_1.prisma.user.update({
                 where: { id: req.user.id },
                 data: {
@@ -159,8 +157,8 @@ class AuthController {
                 action: 'UPDATE',
                 entity: 'USER',
                 entityId: req.user.id,
-                ipAddress: request.ip,
-                userAgent: request.get('user-agent')
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent')
             });
             // Return updated user (without password)
             const userResponse = {
@@ -204,9 +202,7 @@ class AuthController {
                     message: 'Not authenticated'
                 });
             }
-            // Use type assertion to access Request properties
-            const request = req;
-            const { currentPassword, newPassword } = request.body;
+            const { currentPassword, newPassword } = req.body;
             if (!currentPassword || !newPassword) {
                 return res.status(400).json({
                     success: false,
@@ -235,8 +231,8 @@ class AuthController {
                 action: 'CHANGE_PASSWORD',
                 entity: 'USER',
                 entityId: req.user.id,
-                ipAddress: request.ip,
-                userAgent: request.get('user-agent')
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent')
             });
             res.json({
                 success: true,
@@ -254,8 +250,6 @@ class AuthController {
     logout = async (req, res) => {
         try {
             if (req.user) {
-                // Use type assertion to access Request properties
-                const request = req;
                 // Log logout action
                 await this.auditService.log({
                     userId: req.user.id,
@@ -264,8 +258,8 @@ class AuthController {
                     action: 'LOGOUT',
                     entity: 'USER',
                     entityId: req.user.id,
-                    ipAddress: request.ip,
-                    userAgent: request.get('user-agent')
+                    ipAddress: req.ip,
+                    userAgent: req.get('user-agent')
                 });
             }
             res.json({

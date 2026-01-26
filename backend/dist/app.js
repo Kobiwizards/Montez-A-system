@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createApp = void 0;
-const express_1 = __importDefault(require("express"));
+const express_1 = __importDefault(require("express")); // FIXED: Import from 'express' not '../types/express'
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const compression_1 = __importDefault(require("compression"));
@@ -12,7 +12,7 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const routes_1 = __importDefault(require("./routes"));
 const error_middleware_1 = require("./middleware/error.middleware");
 const not_found_middleware_1 = require("./middleware/not-found.middleware");
-const cors_middleware_1 = require("./middleware/cors.middleware"); // ADD THIS
+const cors_middleware_1 = require("./middleware/cors.middleware");
 const path_1 = __importDefault(require("path"));
 const createApp = () => {
     const app = (0, express_1.default)();

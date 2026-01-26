@@ -8,7 +8,8 @@ interface WebSocketMessage {
   userId?: string
 }
 
-interface AuthenticatedWebSocket extends WebSocket {
+// Simple extension without redefining methods
+type AuthenticatedWebSocket = WebSocket & {
   userId?: string
   userRole?: string
 }
