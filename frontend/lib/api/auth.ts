@@ -37,22 +37,21 @@ export const authApi = {
       
       console.log('Login API response:', response);
       
-      if (!response || typeof response !== 'object') {
-        throw new Error('Invalid response from server');
-      }
+      const data = response as any;
       
-      if (!response.success || !response.token || !response.user) {
-        console.error('Invalid response format:', response);
+      // ✅ FIXED: Check direct properties (backend returns token, refreshToken, user at root)
+      if (!data.success || !data.token || !data.user) {
+        console.error('Invalid response format:', data);
         throw new Error('Invalid response from server. Please try again.');
       }
       
-      console.log('Login successful for user:', response.user.email);
+      console.log('Login successful for user:', data.user.email);
       
       return {
-        success: response.success,
-        user: response.user,
-        token: response.token,
-        refreshToken: response.refreshToken
+        success: data.success,
+        user: data.user,
+        token: data.token,           // ✅ Backend returns "token" not "accessToken"
+        refreshToken: data.refreshToken
       };
     } catch (error: any) {
       console.error('Auth API login error:', error);
@@ -82,7 +81,6 @@ export const authApi = {
     }
   },
 
-  // ADDED: Register method
   register: async (userData: any): Promise<ApiResponse> => {
     try {
       return await api.post<ApiResponse>('/auth/register', userData);

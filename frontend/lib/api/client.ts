@@ -51,9 +51,11 @@ class ApiClient {
               
               console.log('Refresh token response:', response.data)
               
-              // Handle backend response format: { success: true, token, refreshToken }
+              // ✅ Handle both response formats
               if (response.data.success) {
-                const { token: newToken, refreshToken: newRefreshToken } = response.data
+                // Backend returns: { success: true, token, refreshToken }
+                const newToken = response.data.token || response.data.accessToken
+                const newRefreshToken = response.data.refreshToken
                 
                 if (newToken) {
                   this.setToken(newToken)
@@ -79,26 +81,31 @@ class ApiClient {
 
   private getToken(): string | null {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('token')
+      // ✅ Check both token names for compatibility
+      return localStorage.getItem('token') || localStorage.getItem('accessToken')
     }
     return null
   }
 
   private setToken(token: string): void {
     if (typeof window !== 'undefined') {
+      // ✅ Store in both for compatibility
       localStorage.setItem('token', token)
+      localStorage.setItem('accessToken', token)
     }
   }
 
   private clearAuth(): void {
     if (typeof window !== 'undefined') {
+      // ✅ Clear both token names
       localStorage.removeItem('token')
+      localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
     }
   }
 
-  // Generic request method - SIMPLIFIED
+  // Generic request method
   async request<T>(config: AxiosRequestConfig): Promise<T> {
     try {
       const response = await this.client.request(config)

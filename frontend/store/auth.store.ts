@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
 
       setLoading: (isLoading) => set({ isLoading }),
 
+      // ✅ This accepts both "token" and "accessToken" names from frontend
       login: (user, accessToken, refreshToken) => set({
         user,
         accessToken,

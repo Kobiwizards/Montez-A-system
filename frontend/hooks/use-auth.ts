@@ -4,19 +4,6 @@ import { useAuthStore } from '@/store/auth.store'
 import { api } from '@/lib/api/client'
 import { LoginCredentials, RegisterData, ChangePasswordData } from '@/types/auth.types'
 
-// Define API response types
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-}
-
-interface LoginResponseData {
-  user: any;
-  accessToken: string;
-  refreshToken?: string;
-}
-
 export function useAuth() {
   const router = useRouter()
   const pathname = usePathname()
@@ -39,9 +26,8 @@ export function useAuth() {
       if (accessToken && !user) {
         try {
           setLoading(true)
-          const response = await api.get<ApiResponse>('/auth/profile')
+          const response = await api.get<any>('/auth/profile')
           
-          // Type cast response
           const data = response as any
           
           if (data.success && data.data) {
@@ -71,14 +57,15 @@ export function useAuth() {
   const login = async (credentials: LoginCredentials) => {
     try {
       setLoading(true)
-      const response = await api.post<ApiResponse<LoginResponseData>>('/auth/login', credentials)
+      const response = await api.post<any>('/auth/login', credentials)
       
-      // Type cast response
       const data = response as any
       
-      if (data.success && data.data) {
-        const { user, accessToken, refreshToken } = data.data
-        storeLogin(user, accessToken, refreshToken)
+      // ✅ FIXED: Check direct properties, not nested in data
+      if (data.success && data.user && data.token) {
+        // ✅ Use token as accessToken
+        const { user, token, refreshToken } = data
+        storeLogin(user, token, refreshToken)
         
         // Redirect based on role
         if (user.role === 'admin') {
@@ -107,9 +94,8 @@ export function useAuth() {
   const register = async (data: RegisterData) => {
     try {
       setLoading(true)
-      const response = await api.post<ApiResponse>('/auth/register', data)
+      const response = await api.post<any>('/auth/register', data)
       
-      // Type cast response
       const result = response as any
       
       if (result.success) {
@@ -132,7 +118,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await api.post<any>('/auth/logout')
+      await api.post('/auth/logout')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -144,9 +130,8 @@ export function useAuth() {
   const changePassword = async (data: ChangePasswordData) => {
     try {
       setLoading(true)
-      const response = await api.put<ApiResponse>('/auth/change-password', data)
+      const response = await api.put<any>('/auth/change-password', data)
       
-      // Type cast response
       const result = response as any
       
       if (result.success) {
@@ -170,9 +155,8 @@ export function useAuth() {
   const updateProfile = async (data: any) => {
     try {
       setLoading(true)
-      const response = await api.put<ApiResponse>('/auth/profile', data)
+      const response = await api.put<any>('/auth/profile', data)
       
-      // Type cast response
       const result = response as any
       
       if (result.success && result.data) {
@@ -196,14 +180,13 @@ export function useAuth() {
 
   const refreshToken = async () => {
     try {
-      const response = await api.post<ApiResponse<LoginResponseData>>('/auth/refresh-token')
+      const response = await api.post<any>('/auth/refresh-token')
       
-      // Type cast response
       const data = response as any
       
       if (data.success && data.data) {
-        const { accessToken, refreshToken } = data.data
-        setTokens(accessToken, refreshToken)
+        const { token, refreshToken } = data.data
+        setTokens(token, refreshToken)
         return true
       }
       return false
