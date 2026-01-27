@@ -46,8 +46,7 @@ export default function LoginPage() {
         Attempting login for: ${email}
       `)
 
-      // OPTION 4 IMPLEMENTATION STARTS HERE
-      console.log('🔄 Attempting direct fetch with Option 4 fix...')
+      console.log('🔄 Attempting direct fetch...')
       const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
@@ -76,28 +75,31 @@ export default function LoginPage() {
       }
       
       // ✅ SUCCESS - Extract data from backend format
-      // Backend returns: { success: true, message: '...', data: { user, accessToken, refreshToken } }
-      const { user, accessToken, refreshToken } = responseData.data
+      // ✅ FIXED: Backend returns: { success: true, token, refreshToken, user } at ROOT level
+      // NOT nested in data!
+      const { user, token, refreshToken } = responseData // ⬅️ FIXED HERE
       
-      if (!user || !accessToken) {
+      if (!user || !token) {
         console.error('❌ Invalid response format - missing user or token')
         setError('Invalid server response format')
         setDebugInfo(prev => prev + `
           Invalid Response Format:
           User exists: ${!!user}
-          AccessToken exists: ${!!accessToken}
-          Full data: ${JSON.stringify(responseData.data, null, 2)}
+          Token exists: ${!!token}
+          RefreshToken exists: ${!!refreshToken}
+          Full response: ${JSON.stringify(responseData, null, 2)}
         `)
         return
       }
       
       console.log('✅ Login successful!')
       console.log('User:', user.email)
-      console.log('Token (first 20 chars):', accessToken.substring(0, 20) + '...')
+      console.log('Token (first 20 chars):', token.substring(0, 20) + '...')
       console.log('User role:', user.role)
       
-      // Save to localStorage
-      localStorage.setItem('token', accessToken)
+      // Save to localStorage (use token as accessToken)
+      localStorage.setItem('token', token)
+      localStorage.setItem('accessToken', token) // Store both for compatibility
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken)
       }
@@ -108,13 +110,12 @@ export default function LoginPage() {
         ✅ LOGIN SUCCESSFUL!
         User: ${user.email}
         Role: ${user.role}
-        Token saved: ${accessToken.substring(0, 20)}...
+        Token saved: ${token.substring(0, 20)}...
         Redirecting to dashboard...
       `)
       
       // Redirect based on role
       // Using window.location.href instead of router.push to ensure full page reload
-      // This will properly initialize the auth context
       if (user.role === 'ADMIN') {
         console.log('Redirecting to admin dashboard...')
         window.location.href = '/admin/dashboard'
@@ -161,7 +162,6 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            {/* Debug info - only show in development or when there's an error */}
             {(process.env.NODE_ENV === 'development' || debugInfo) && (
               <Alert className="bg-blue-50 border-blue-200">
                 <AlertDescription className="text-xs font-mono whitespace-pre">
@@ -258,7 +258,6 @@ export default function LoginPage() {
                   onClick={() => {
                     setEmail('admin@monteza.com')
                     setPassword('admin123')
-                    // Auto-log debug info
                     setDebugInfo(`
                       Testing with admin credentials...
                       Email: admin@monteza.com
