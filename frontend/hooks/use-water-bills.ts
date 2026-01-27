@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useWaterStore } from '@/store/water.store'
-import { api } from '@/lib/api'
+import { api } from '@/lib/api/client' // ✅ FIXED IMPORT
 import { WaterReading, WaterReadingCreateData } from '@/types/water.types'
 
 export function useWaterBills() {
@@ -36,14 +36,17 @@ export function useWaterBills() {
         }
       })
 
-      const response = await api.get(`/water/readings?${params}`)
+      const response = await api.get<any>(`/water/readings?${params}`)
+      
+      // Type cast response
+      const data = response as any
 
-      if (response.success && response.data) {
-        setReadings(response.data.readings || response.data)
-        return { success: true, data: response.data }
+      if (data.success && data.data) {
+        setReadings(data.data.readings || data.data)
+        return { success: true, data: data.data }
       } else {
-        setError(response.message || 'Failed to fetch water readings')
-        return { success: false, error: response.message }
+        setError(data.message || 'Failed to fetch water readings')
+        return { success: false, error: data.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to fetch water readings')
@@ -58,14 +61,17 @@ export function useWaterBills() {
       setLoading(true)
       clearError()
 
-      const response = await api.get(`/water/readings/${id}`)
+      const response = await api.get<any>(`/water/readings/${id}`)
+      
+      // Type cast response
+      const data = response as any
 
-      if (response.success && response.data) {
-        setSelectedReading(response.data)
-        return { success: true, data: response.data }
+      if (data.success && data.data) {
+        setSelectedReading(data.data)
+        return { success: true, data: data.data }
       } else {
-        setError(response.message || 'Failed to fetch water reading')
-        return { success: false, error: response.message }
+        setError(data.message || 'Failed to fetch water reading')
+        return { success: false, error: data.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to fetch water reading')
@@ -80,15 +86,18 @@ export function useWaterBills() {
       setLoading(true)
       clearError()
 
-      const response = await api.post(`/water/tenants/${tenantId}/readings`, data)
+      const response = await api.post<any>(`/water/tenants/${tenantId}/readings`, data)
+      
+      // Type cast response
+      const result = response as any
 
-      if (response.success && response.data) {
+      if (result.success && result.data) {
         // Refresh readings list
         await fetchReadings()
-        return { success: true, data: response.data }
+        return { success: true, data: result.data }
       } else {
-        setError(response.message || 'Failed to create water reading')
-        return { success: false, error: response.message }
+        setError(result.message || 'Failed to create water reading')
+        return { success: false, error: result.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to create water reading')
@@ -103,16 +112,19 @@ export function useWaterBills() {
       setLoading(true)
       clearError()
 
-      const response = await api.put(`/water/readings/${id}`, data)
+      const response = await api.put<any>(`/water/readings/${id}`, data)
+      
+      // Type cast response
+      const result = response as any
 
-      if (response.success && response.data) {
+      if (result.success && result.data) {
         // Refresh reading and list
         await fetchReading(id)
         await fetchReadings()
-        return { success: true, data: response.data }
+        return { success: true, data: result.data }
       } else {
-        setError(response.message || 'Failed to update water reading')
-        return { success: false, error: response.message }
+        setError(result.message || 'Failed to update water reading')
+        return { success: false, error: result.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to update water reading')
@@ -127,15 +139,18 @@ export function useWaterBills() {
       setLoading(true)
       clearError()
 
-      const response = await api.delete(`/water/readings/${id}`)
+      const response = await api.delete<any>(`/water/readings/${id}`)
+      
+      // Type cast response
+      const result = response as any
 
-      if (response.success) {
+      if (result.success) {
         // Refresh readings list
         await fetchReadings()
         return { success: true }
       } else {
-        setError(response.message || 'Failed to delete water reading')
-        return { success: false, error: response.message }
+        setError(result.message || 'Failed to delete water reading')
+        return { success: false, error: result.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to delete water reading')
@@ -154,14 +169,17 @@ export function useWaterBills() {
       if (month) params.append('month', month)
       if (year) params.append('year', String(year))
 
-      const response = await api.get(`/water/summary?${params}`)
+      const response = await api.get<any>(`/water/summary?${params}`)
+      
+      // Type cast response
+      const data = response as any
 
-      if (response.success && response.data) {
-        setSummary(response.data)
-        return { success: true, data: response.data }
+      if (data.success && data.data) {
+        setSummary(data.data)
+        return { success: true, data: data.data }
       } else {
-        setError(response.message || 'Failed to fetch water summary')
-        return { success: false, error: response.message }
+        setError(data.message || 'Failed to fetch water summary')
+        return { success: false, error: data.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to fetch water summary')
@@ -177,14 +195,17 @@ export function useWaterBills() {
       clearError()
 
       const params = new URLSearchParams({ startDate, endDate })
-      const response = await api.get(`/water/report?${params}`)
+      const response = await api.get<any>(`/water/report?${params}`)
+      
+      // Type cast response
+      const data = response as any
 
-      if (response.success && response.data) {
-        setReport(response.data)
-        return { success: true, data: response.data }
+      if (data.success && data.data) {
+        setReport(data.data)
+        return { success: true, data: data.data }
       } else {
-        setError(response.message || 'Failed to fetch water report')
-        return { success: false, error: response.message }
+        setError(data.message || 'Failed to fetch water report')
+        return { success: false, error: data.message }
       }
     } catch (error: any) {
       setError(error.message || 'Failed to fetch water report')
