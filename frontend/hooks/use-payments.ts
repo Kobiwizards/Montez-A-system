@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { usePaymentStore } from '@/store/payment.store'
-import { api } from '@/lib/api'
+import { api } from '@/lib/api/client' // ✅ FIXED IMPORT
 import { Payment, PaymentCreateDTO, PaymentUpdateDTO } from '@/types/payment.types'
 
 export function usePayments() {

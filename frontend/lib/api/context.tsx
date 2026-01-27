@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, ReactNode } from 'react'
-import { authApi } from './auth'  // Import the real authApi
+import { authApi } from './auth'
 
 interface ApiContextValue {
   auth: {
@@ -12,10 +12,13 @@ interface ApiContextValue {
     resetPassword: (token: string, password: string) => Promise<any>
     verifyEmail: (token: string) => Promise<any>
     refreshToken: (refreshToken: string) => Promise<any>
+    getProfile: () => Promise<any>
+    updateProfile: (userData: any) => Promise<any>
+    changePassword: (data: any) => Promise<any>
+    verifyToken: () => Promise<any>
   }
 }
 
-// Create context
 const ApiContext = createContext<ApiContextValue | undefined>(undefined)
 
 export function useApi() {
@@ -31,7 +34,6 @@ interface ApiProviderProps {
 }
 
 export function ApiProvider({ children }: ApiProviderProps) {
-  // Use the real authApi functions
   const value: ApiContextValue = {
     auth: {
       login: authApi.login,
@@ -41,12 +43,16 @@ export function ApiProvider({ children }: ApiProviderProps) {
       resetPassword: authApi.resetPassword,
       verifyEmail: authApi.verifyEmail,
       refreshToken: authApi.refreshToken,
+      getProfile: authApi.getProfile,
+      updateProfile: authApi.updateProfile,
+      changePassword: authApi.changePassword,
+      verifyToken: authApi.verifyToken
     }
   }
 
-  return React.createElement(
-    ApiContext.Provider,
-    { value },
-    children
+  return (
+    <ApiContext.Provider value={value}>
+      {children}
+    </ApiContext.Provider>
   )
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useTenantStore } from '@/store/tenant.store'
-import { api } from '@/lib/api'
+import { api } from '@/lib/api/client' // ✅ FIXED IMPORT
 import { Tenant, UpdateTenantData, TenantFilters } from '@/types/tenant.types'
 
 export function useTenants() {

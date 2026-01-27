@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
-import { api } from '@/lib/api'
+import { api } from '@/lib/api/client' // ✅ FIXED IMPORT
 import { LoginCredentials, RegisterData, ChangePasswordData } from '@/types/auth.types'
 
 export function useAuth() {

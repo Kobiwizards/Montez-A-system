@@ -5,7 +5,7 @@ import './globals.css'
 import { ThemeProvider } from '@/components/shared/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/components/shared/auth-provider'
-import { ApiProvider } from '@/lib/api/context'
+import { ApiProvider } from '@/lib/api/context' // This will work after rename
 
 const inter = Inter({
   subsets: ['latin'],
@@ -17,13 +17,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono',
 })
 
-// Since this is a client component, you can't export metadata
-// Define it as a constant instead
-const metadata = {
-  title: 'Montez A Property Management',
-  description: 'Property management system for Montez A apartments',
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -32,8 +25,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <title>{metadata.title}</title>
-        <meta name="description" content={metadata.description} />
+        <title>Montez A Property Management</title>
+        <meta name="description" content="Property management system for Montez A apartments" />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider

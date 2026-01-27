@@ -1,8 +1,43 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAnalyticsStore } from '@/store/analytics.store'
-import { api } from '@/lib/api'
+import { api } from '@/lib/api/client'
 
-// Define types locally
+// Define proper types that match your store
+interface AnalyticsData {
+  summary?: {
+    totalRevenue: number;
+    totalTenants: number;
+    occupancyRate: number;
+    pendingPayments: number;
+    averageRent: number;
+    waterBillsDue: number;
+  };
+  monthlyTrends?: Array<{
+    month: string;
+    revenue: number;
+    payments: number;
+    occupancy: number;
+  }>;
+  tenantStatus?: {
+    current: number;
+    overdue: number;
+    delinquent: number;
+    evicted: number;
+  };
+  unitStatus?: {
+    occupied: number;
+    vacant: number;
+    maintenance: number;
+  };
+  recentActivity?: Array<{
+    id: string;
+    type: string;
+    description: string;
+    amount?: number;
+    date: string;
+  }>;
+}
+
 interface AnalyticsFilters {
   startDate?: string
   endDate?: string
@@ -35,15 +70,43 @@ export function useAnalytics() {
       setLoading(true)
       setError(null)
       
-      const response = await api.get('/analytics/dashboard')
+      const response = await api.get<any>('/analytics/dashboard')
       
-      if (response.success && response.data) {
-        setDashboardData(response.data)
-        return { success: true, data: response.data }
+      // Type cast to AnalyticsData
+      const data = response as any
+      
+      if (data.success && data.data) {
+        // Transform data to match AnalyticsData type if needed
+        const dashboardData: AnalyticsData = {
+          summary: data.data.summary || {
+            totalRevenue: data.data.totalRevenue || 0,
+            totalTenants: data.data.totalTenants || 0,
+            occupancyRate: data.data.occupancyRate || 0,
+            pendingPayments: data.data.pendingPayments || 0,
+            averageRent: data.data.averageRent || 0,
+            waterBillsDue: data.data.waterBillsDue || 0,
+          },
+          monthlyTrends: data.data.monthlyTrends || data.data.trends || [],
+          tenantStatus: data.data.tenantStatus || {
+            current: data.data.currentTenants || 0,
+            overdue: data.data.overdueTenants || 0,
+            delinquent: data.data.delinquentTenants || 0,
+            evicted: data.data.evictedTenants || 0,
+          },
+          unitStatus: data.data.unitStatus || {
+            occupied: data.data.occupiedUnits || 0,
+            vacant: data.data.vacantUnits || 0,
+            maintenance: data.data.maintenanceUnits || 0,
+          },
+          recentActivity: data.data.recentActivity || data.data.activity || [],
+        }
+        
+        setDashboardData(dashboardData)
+        return { success: true, data: dashboardData }
       } else {
         return { 
           success: false, 
-          error: response.message || 'Failed to fetch dashboard data' 
+          error: data.message || 'Failed to fetch dashboard data' 
         }
       }
     } catch (error: any) {
@@ -73,15 +136,17 @@ export function useAnalytics() {
         })
       }
 
-      const response = await api.get(`/analytics/occupancy?${params}`)
+      const response = await api.get<any>(`/analytics/occupancy?${params}`)
       
-      if (response.success && response.data) {
-        setOccupancyData(response.data)
-        return { success: true, data: response.data }
+      const data = response as any
+      
+      if (data.success && data.data) {
+        setOccupancyData(data.data)
+        return { success: true, data: data.data }
       } else {
         return { 
           success: false, 
-          error: response.message || 'Failed to fetch occupancy data' 
+          error: data.message || 'Failed to fetch occupancy data' 
         }
       }
     } catch (error: any) {
@@ -111,15 +176,17 @@ export function useAnalytics() {
         })
       }
 
-      const response = await api.get(`/analytics/financial?${params}`)
+      const response = await api.get<any>(`/analytics/financial?${params}`)
       
-      if (response.success && response.data) {
-        setFinancialData(response.data)
-        return { success: true, data: response.data }
+      const data = response as any
+      
+      if (data.success && data.data) {
+        setFinancialData(data.data)
+        return { success: true, data: data.data }
       } else {
         return { 
           success: false, 
-          error: response.message || 'Failed to fetch financial data' 
+          error: data.message || 'Failed to fetch financial data' 
         }
       }
     } catch (error: any) {
@@ -140,14 +207,16 @@ export function useAnalytics() {
       setLoading(true)
       setError(null)
       
-      const response = await api.post('/analytics/report', { type, ...filters })
+      const response = await api.post<any>('/analytics/report', { type, ...filters })
       
-      if (response.success && response.data) {
-        return { success: true, data: response.data }
+      const data = response as any
+      
+      if (data.success && data.data) {
+        return { success: true, data: data.data }
       } else {
         return { 
           success: false, 
-          error: response.message || 'Failed to generate report' 
+          error: data.message || 'Failed to generate report' 
         }
       }
     } catch (error: any) {
