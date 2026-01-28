@@ -317,5 +317,155 @@ class AnalyticsController {
             });
         }
     };
+    // New method for generating custom reports
+    generateReport = async (req, res) => {
+        try {
+            const { type, startDate, endDate } = req.body;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            let reportData = {};
+            switch (type) {
+                case 'financial':
+                    // Get financial report
+                    const payments = await prisma_1.prisma.payment.findMany({
+                        where: {
+                            createdAt: {
+                                gte: start,
+                                lte: end
+                            },
+                            type: 'RENT'
+                        },
+                        include: {
+                            tenant: {
+                                select: {
+                                    name: true,
+                                    apartment: true,
+                                    email: true
+                                }
+                            }
+                        }
+                    });
+                    const totalRevenue = payments
+                        .filter(p => p.status === 'VERIFIED')
+                        .reduce((sum, p) => sum + p.amount, 0);
+                    const pendingPayments = payments.filter(p => p.status === 'PENDING');
+                    reportData = {
+                        totalRevenue,
+                        totalTransactions: payments.length,
+                        verifiedPayments: payments.filter(p => p.status === 'VERIFIED').length,
+                        pendingPayments: pendingPayments.length,
+                        paymentDetails: payments.map(p => ({
+                            tenant: p.tenant.name,
+                            apartment: p.tenant.apartment,
+                            amount: p.amount,
+                            status: p.status,
+                            date: p.createdAt,
+                            month: p.month,
+                            method: p.method
+                        })),
+                        summary: {
+                            totalAmount: totalRevenue,
+                            averagePayment: payments.length > 0 ? totalRevenue / payments.length : 0,
+                            paymentMethods: {
+                                mpesa: payments.filter(p => p.method === 'MPESA').length,
+                                cash: payments.filter(p => p.method === 'CASH').length,
+                                bank: payments.filter(p => p.method === 'BANK_TRANSFER').length
+                            }
+                        }
+                    };
+                    break;
+                case 'occupancy':
+                    // Get occupancy report
+                    const tenants = await prisma_1.prisma.user.findMany({
+                        where: {
+                            role: 'TENANT',
+                            moveInDate: {
+                                lte: end
+                            },
+                            OR: [
+                                { leaseEndDate: { gte: start } },
+                                { leaseEndDate: null }
+                            ]
+                        }
+                    });
+                    const currentOccupants = await prisma_1.prisma.user.findMany({
+                        where: {
+                            role: 'TENANT',
+                            status: { in: ['CURRENT', 'OVERDUE', 'DELINQUENT'] }
+                        }
+                    });
+                    reportData = {
+                        totalUnits: 26, // Montez A has 26 units
+                        occupiedUnits: currentOccupants.length,
+                        vacantUnits: 26 - currentOccupants.length,
+                        occupancyRate: (currentOccupants.length / 26) * 100,
+                        tenantDetails: tenants.map(t => ({
+                            name: t.name,
+                            apartment: t.apartment,
+                            moveInDate: t.moveInDate,
+                            status: t.status,
+                            balance: t.balance,
+                            rentAmount: t.rentAmount
+                        }))
+                    };
+                    break;
+                case 'payments':
+                    // Get detailed payment report
+                    const allPayments = await prisma_1.prisma.payment.findMany({
+                        where: {
+                            createdAt: {
+                                gte: start,
+                                lte: end
+                            }
+                        },
+                        include: {
+                            tenant: {
+                                select: {
+                                    name: true,
+                                    apartment: true
+                                }
+                            }
+                        },
+                        orderBy: {
+                            createdAt: 'desc'
+                        }
+                    });
+                    const verifiedPayments = allPayments.filter(p => p.status === 'VERIFIED');
+                    const pendingPaymentsAll = allPayments.filter(p => p.status === 'PENDING');
+                    reportData = {
+                        payments: allPayments,
+                        summary: {
+                            totalCollected: verifiedPayments.reduce((sum, p) => sum + p.amount, 0),
+                            totalPending: pendingPaymentsAll.reduce((sum, p) => sum + p.amount, 0),
+                            byType: {
+                                rent: allPayments.filter(p => p.type === 'RENT').length,
+                                water: allPayments.filter(p => p.type === 'WATER').length,
+                                maintenance: allPayments.filter(p => p.type === 'MAINTENANCE').length,
+                                other: allPayments.filter(p => p.type === 'OTHER').length
+                            }
+                        }
+                    };
+                    break;
+                default:
+                    res.status(400).json({
+                        success: false,
+                        message: 'Invalid report type'
+                    });
+                    return;
+            }
+            res.status(200).json({
+                success: true,
+                data: reportData,
+                message: 'Report generated successfully'
+            });
+        }
+        catch (error) {
+            console.error('Generate report error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to generate report'
+            });
+        }
+    };
 }
 exports.AnalyticsController = AnalyticsController;
