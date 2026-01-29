@@ -44,6 +44,14 @@ router.get(
   analyticsController.getWaterConsumptionReport
 )
 
+// New report generation endpoint (POST for sending report parameters in body)
+router.post(
+  '/report',
+  authenticate,
+  authorize('ADMIN'),
+  analyticsController.generateReport
+)
+
 router.get(
   '/export',
   authenticate,
