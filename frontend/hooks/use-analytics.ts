@@ -14,6 +14,7 @@ interface AnalyticsData {
     totalWaterPaid: number
     pendingPayments: number
     verifiedPayments: number
+    averageRent: number  // Added missing property
   }
   monthlyTrends: Array<{
     month: string
@@ -102,6 +103,12 @@ export function useAnalytics() {
             totalWaterPaid: apiData.totalWaterPaid || apiData.summary?.totalWaterPaid || 0,
             pendingPayments: apiData.pendingPayments || apiData.summary?.pendingPayments || 0,
             verifiedPayments: apiData.verifiedPayments || apiData.summary?.verifiedPayments || 0,
+            // Calculate average rent if not provided by backend
+            averageRent: apiData.averageRent || apiData.summary?.averageRent || 
+              (apiData.totalTenants || apiData.summary?.totalTenants) 
+                ? Math.round((apiData.totalRentPaid || apiData.summary?.totalRentPaid || 0) / 
+                    (apiData.totalTenants || apiData.summary?.totalTenants || 1))
+                : 0,
           },
           monthlyTrends,
           tenantStatus: {
