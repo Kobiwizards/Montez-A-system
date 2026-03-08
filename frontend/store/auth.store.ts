@@ -56,10 +56,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: (user, accessToken, refreshToken) => {
-        // Normalize role to uppercase for consistency
-        const normalizedUser = {
+        // ✅ Explicitly cast role to the correct type
+        const role = user.role?.toLowerCase?.() as 'admin' | 'tenant'
+        
+        const normalizedUser: User = {
           ...user,
-          role: user.role?.toUpperCase?.() || user.role
+          role: role
         }
         
         console.log('📦 AuthStore - login:', {

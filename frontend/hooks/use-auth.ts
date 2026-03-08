@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
 import { api } from '@/lib/api/client'
-import { LoginCredentials, RegisterData, ChangePasswordData } from '@/types/auth.types'
+import { LoginCredentials, RegisterData, ChangePasswordData, User } from '@/types/auth.types'
 
 export function useAuth() {
   const router = useRouter()
@@ -99,10 +99,12 @@ export function useAuth() {
       if (data.success && data.user && data.token) {
         const { user, token, refreshToken } = data
         
-        // Normalize role to uppercase for consistency
-        const normalizedUser = {
+        // ✅ Explicitly cast role to the correct type
+        const role = user.role?.toLowerCase?.() as 'admin' | 'tenant'
+        
+        const normalizedUser: User = {
           ...user,
-          role: user.role?.toUpperCase?.() || user.role
+          role: role
         }
         
         console.log('✅ Login successful - user:', {
@@ -124,7 +126,7 @@ export function useAuth() {
         console.log('💾 Data saved to localStorage')
         
         // Redirect based on role
-        const redirectPath = normalizedUser.role === 'ADMIN' ? '/admin/dashboard' : '/tenant/dashboard'
+        const redirectPath = normalizedUser.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard'
         console.log('🔄 Redirecting to:', redirectPath)
         
         // Use window.location for hard redirect to ensure fresh state
