@@ -79,13 +79,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Call REAL backend API
       const response = await auth.login({ email, password })
       
-      if (response.success && response.data) {
-        const { user, token, refreshToken } = response.data
+      // ✅ FIXED: Backend returns data at root level, not nested
+      if (response.success && response.user && response.token) {
+        const { user, token, refreshToken } = response
+        
         setUser(user)
         
         // Store in localStorage
         localStorage.setItem('token', token)
-        localStorage.setItem('refreshToken', refreshToken || '')
+        localStorage.setItem('accessToken', token) // Store both for compatibility
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken)
+        }
         localStorage.setItem('user', JSON.stringify(user))
         
         // Redirect based on role
@@ -116,6 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       // Clear local storage
       localStorage.removeItem('token')
+      localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
       setUser(null)
