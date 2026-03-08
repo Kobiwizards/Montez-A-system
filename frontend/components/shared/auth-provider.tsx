@@ -10,7 +10,7 @@ interface User {
   name: string
   phone?: string
   apartment: string
-  role: 'ADMIN' | 'TENANT'
+  role: 'admin' | 'tenant'  // ✅ FIXED: Changed from 'ADMIN' | 'TENANT'
   rentAmount: number
   balance: number
   waterRate?: number
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const token = localStorage.getItem('token')
         const storedUser = localStorage.getItem('user')
-        
+
         if (token && storedUser) {
           setUser(JSON.parse(storedUser))
         }
@@ -75,16 +75,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true)
-      
+
       // Call REAL backend API
       const response = await auth.login({ email, password })
-      
+
       // ✅ FIXED: Backend returns data at root level, not nested
       if (response.success && response.user && response.token) {
         const { user, token, refreshToken } = response
-        
+
         setUser(user)
-        
+
         // Store in localStorage
         localStorage.setItem('token', token)
         localStorage.setItem('accessToken', token) // Store both for compatibility
@@ -92,14 +92,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           localStorage.setItem('refreshToken', refreshToken)
         }
         localStorage.setItem('user', JSON.stringify(user))
-        
-        // Redirect based on role
-        if (user.role === 'ADMIN') {
+
+        // ✅ FIXED: Check for lowercase 'admin'
+        if (user.role === 'admin') {
           router.push('/admin/dashboard')
         } else {
           router.push('/tenant/dashboard')
         }
-        
+
         return true
       } else {
         console.error('Login failed:', response.message)

@@ -22,7 +22,6 @@ export default function AdminLayout({
     console.log('User object:', user)
     console.log('User role:', user?.role)
     console.log('User role type:', typeof user?.role)
-    console.log('User role uppercase:', user?.role?.toUpperCase())
     console.log('LocalStorage token:', localStorage.getItem('token'))
     console.log('LocalStorage user:', localStorage.getItem('user'))
     console.log('='.repeat(50))
@@ -40,10 +39,9 @@ export default function AdminLayout({
       return
     }
 
-    // Check if user has admin role
-    const userRole = user?.role?.toString().toUpperCase()
-    if (userRole !== 'ADMIN') {
-      console.log(`❌ Role check failed - got "${userRole}" but expected "ADMIN"`)
+    // ✅ FIXED: Check for lowercase 'admin' instead of uppercase
+    if (user?.role !== 'admin') {
+      console.log(`❌ Role check failed - got "${user?.role}" but expected "admin"`)
       router.push('/login')
       return
     }
@@ -58,27 +56,28 @@ export default function AdminLayout({
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading admin panel...</p>
-          <p className="text-xs text-muted-foreground mt-2">Checking authentication...</p>
+          <p className="text-xs text-muted-foreground mt-2">Checking authentication...</p>     
         </div>
       </div>
     )
   }
 
-  // If not authenticated or not admin, show access denied
-  if (!isAuthenticated || user?.role?.toUpperCase() !== 'ADMIN') {
+  // ✅ FIXED: Check for lowercase 'admin'
+  if (!isAuthenticated || user?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md p-6 bg-red-50 border border-red-200 rounded-lg">
+        <div className="text-center max-w-md p-6 bg-red-50 border border-red-200 rounded-lg">  
           <h2 className="text-xl font-bold text-red-700 mb-2">Access Denied</h2>
-          <p className="text-red-600 mb-4">You don't have permission to access this page.</p>
+          <p className="text-red-600 mb-4">You don't have permission to access this page.</p>  
           <div className="text-left text-sm text-red-500 bg-white p-3 rounded border border-red-200">
             <p className="font-mono">Debug Info:</p>
             <p>isAuthenticated: {String(isAuthenticated)}</p>
             <p>User exists: {user ? 'Yes' : 'No'}</p>
             <p>User role: {user?.role || 'undefined'}</p>
+            <p>Expected role: admin</p>
             <p>Token exists: {localStorage.getItem('token') ? 'Yes' : 'No'}</p>
           </div>
-          <button 
+          <button
             onClick={() => router.push('/login')}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
