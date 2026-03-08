@@ -14,35 +14,41 @@ export default function AdminLayout({
   const router = useRouter()
 
   useEffect(() => {
-    console.log('🔍 Admin Layout Auth Check:', {
-      isLoading,
-      isAuthenticated,
-      user: user ? {
-        email: user.email,
-        role: user.role,
-        roleType: typeof user.role
-      } : null
-    })
+    // Log EVERYTHING for debugging
+    console.log('='.repeat(50))
+    console.log('🔍 ADMIN LAYOUT DEBUG:')
+    console.log('isLoading:', isLoading)
+    console.log('isAuthenticated:', isAuthenticated)
+    console.log('User object:', user)
+    console.log('User role:', user?.role)
+    console.log('User role type:', typeof user?.role)
+    console.log('User role uppercase:', user?.role?.toUpperCase())
+    console.log('LocalStorage token:', localStorage.getItem('token'))
+    console.log('LocalStorage user:', localStorage.getItem('user'))
+    console.log('='.repeat(50))
 
     // Wait for loading to complete
-    if (isLoading) return
+    if (isLoading) {
+      console.log('⏳ Still loading auth state...')
+      return
+    }
 
-    // Check if user is authenticated and is admin
+    // Check if user is authenticated
     if (!isAuthenticated) {
-      console.log('❌ Not authenticated, redirecting to login')
+      console.log('❌ Not authenticated - redirecting to login')
       router.push('/login')
       return
     }
 
-    // Check if user has admin role (case insensitive)
+    // Check if user has admin role
     const userRole = user?.role?.toString().toUpperCase()
     if (userRole !== 'ADMIN') {
-      console.log(`❌ Not admin (role: ${userRole}), redirecting to login`)
+      console.log(`❌ Role check failed - got "${userRole}" but expected "ADMIN"`)
       router.push('/login')
       return
     }
 
-    console.log('✅ Admin access granted')
+    console.log('✅ Admin access GRANTED!')
   }, [isAuthenticated, user, isLoading, router])
 
   // Show loading state
@@ -58,12 +64,26 @@ export default function AdminLayout({
     )
   }
 
-  // If not authenticated or not admin, show nothing (will redirect)
+  // If not authenticated or not admin, show access denied
   if (!isAuthenticated || user?.role?.toUpperCase() !== 'ADMIN') {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-500">Access denied. Redirecting to login...</p>
+        <div className="text-center max-w-md p-6 bg-red-50 border border-red-200 rounded-lg">
+          <h2 className="text-xl font-bold text-red-700 mb-2">Access Denied</h2>
+          <p className="text-red-600 mb-4">You don't have permission to access this page.</p>
+          <div className="text-left text-sm text-red-500 bg-white p-3 rounded border border-red-200">
+            <p className="font-mono">Debug Info:</p>
+            <p>isAuthenticated: {String(isAuthenticated)}</p>
+            <p>User exists: {user ? 'Yes' : 'No'}</p>
+            <p>User role: {user?.role || 'undefined'}</p>
+            <p>Token exists: {localStorage.getItem('token') ? 'Yes' : 'No'}</p>
+          </div>
+          <button 
+            onClick={() => router.push('/login')}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Go to Login
+          </button>
         </div>
       </div>
     )

@@ -23,21 +23,38 @@ export function useAuth() {
   // Initialize auth state on mount
   useEffect(() => {
     const initAuth = async () => {
+      // Check localStorage directly for debugging
+      const storedToken = localStorage.getItem('token')
+      const storedUser = localStorage.getItem('user')
+      
+      console.log('🔍 Auth Init - Storage check:', {
+        hasToken: !!storedToken,
+        hasUser: !!storedUser,
+        storedUser: storedUser ? JSON.parse(storedUser) : null
+      })
+
       if (accessToken && !user) {
         try {
           setLoading(true)
+          console.log('🔄 Fetching user profile with token:', accessToken.substring(0, 20) + '...')
+          
           const response = await api.get<any>('/auth/profile')
           
           const data = response as any
           
           if (data.success && data.data) {
+            console.log('✅ Profile loaded:', data.data.email)
             setUser(data.data)
+          } else {
+            console.error('❌ Failed to load profile:', data.message)
           }
         } catch (error) {
-          console.error('Failed to load user profile:', error)
+          console.error('❌ Failed to load user profile:', error)
         } finally {
           setLoading(false)
         }
+      } else {
+        setLoading(false)
       }
     }
 
@@ -49,39 +66,80 @@ export function useAuth() {
     const protectedRoutes = ['/admin', '/tenant', '/dashboard']
     const isProtectedRoute = protectedRoutes.some(route => pathname?.startsWith(route))
     
+    console.log('🔐 Route protection check:', {
+      pathname,
+      isProtectedRoute,
+      isAuthenticated,
+      isLoading,
+      userRole: user?.role
+    })
+    
     if (isProtectedRoute && !isAuthenticated && !isLoading) {
+      console.log('🔄 Redirecting to login - not authenticated')
       router.push('/login')
     }
-  }, [pathname, isAuthenticated, isLoading, router])
+  }, [pathname, isAuthenticated, isLoading, router, user])
 
   const login = async (credentials: LoginCredentials) => {
     try {
       setLoading(true)
+      console.log('🔑 Login attempt for:', credentials.email)
+      
       const response = await api.post<any>('/auth/login', credentials)
       
       const data = response as any
       
-      // ✅ FIXED: Check direct properties, not nested in data
+      console.log('📦 Login response:', {
+        success: data.success,
+        hasToken: !!data.token,
+        hasUser: !!data.user,
+        userRole: data.user?.role
+      })
+      
       if (data.success && data.user && data.token) {
-        // ✅ Use token as accessToken
         const { user, token, refreshToken } = data
-        storeLogin(user, token, refreshToken)
+        
+        // Normalize role to uppercase for consistency
+        const normalizedUser = {
+          ...user,
+          role: user.role?.toUpperCase?.() || user.role
+        }
+        
+        console.log('✅ Login successful - user:', {
+          email: normalizedUser.email,
+          role: normalizedUser.role
+        })
+        
+        // Store in auth store (pass token as accessToken)
+        storeLogin(normalizedUser, token, refreshToken)
+        
+        // Also store in localStorage directly as backup
+        localStorage.setItem('token', token)
+        localStorage.setItem('accessToken', token)
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken)
+        }
+        localStorage.setItem('user', JSON.stringify(normalizedUser))
+        
+        console.log('💾 Data saved to localStorage')
         
         // Redirect based on role
-        if (user.role === 'admin') {
-          router.push('/admin/dashboard')
-        } else {
-          router.push('/tenant/dashboard')
-        }
+        const redirectPath = normalizedUser.role === 'ADMIN' ? '/admin/dashboard' : '/tenant/dashboard'
+        console.log('🔄 Redirecting to:', redirectPath)
+        
+        // Use window.location for hard redirect to ensure fresh state
+        window.location.href = redirectPath
         
         return { success: true }
       } else {
+        console.error('❌ Login failed:', data.message)
         return { 
           success: false, 
           error: data.message || 'Login failed' 
         }
       }
     } catch (error: any) {
+      console.error('❌ Login error:', error)
       return { 
         success: false, 
         error: error.message || 'Login failed' 
@@ -118,11 +176,18 @@ export function useAuth() {
 
   const logout = async () => {
     try {
+      console.log('🚪 Logging out...')
       await api.post('/auth/logout')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
+      // Clear everything
+      localStorage.removeItem('token')
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
       storeLogout()
+      console.log('✅ Logout complete, redirecting to home')
       router.push('/')
     }
   }
@@ -187,6 +252,9 @@ export function useAuth() {
       if (data.success && data.data) {
         const { token, refreshToken } = data.data
         setTokens(token, refreshToken)
+        localStorage.setItem('token', token)
+        localStorage.setItem('accessToken', token)
+        localStorage.setItem('refreshToken', refreshToken)
         return true
       }
       return false
@@ -195,8 +263,10 @@ export function useAuth() {
     }
   }
 
+  // Return auth state and methods
   return {
     user,
+    accessToken,
     isAuthenticated,
     isLoading,
     login,

@@ -27,38 +27,76 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      setUser: (user) => set({ 
-        user, 
-        isAuthenticated: !!user 
-      }),
+      setUser: (user) => {
+        console.log('📝 AuthStore - setUser:', { 
+          email: user?.email, 
+          role: user?.role,
+          isAuthenticated: !!user 
+        })
+        set({ 
+          user, 
+          isAuthenticated: !!user 
+        })
+      },
 
-      setTokens: (accessToken, refreshToken) => set({ 
-        accessToken, 
-        refreshToken 
-      }),
+      setTokens: (accessToken, refreshToken) => {
+        console.log('🔑 AuthStore - setTokens:', { 
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken 
+        })
+        set({ 
+          accessToken, 
+          refreshToken 
+        })
+      },
 
-      setLoading: (isLoading) => set({ isLoading }),
+      setLoading: (isLoading) => {
+        console.log('⏳ AuthStore - setLoading:', isLoading)
+        set({ isLoading })
+      },
 
-      // ✅ This accepts both "token" and "accessToken" names from frontend
-      login: (user, accessToken, refreshToken) => set({
-        user,
-        accessToken,
-        refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-      }),
+      login: (user, accessToken, refreshToken) => {
+        // Normalize role to uppercase for consistency
+        const normalizedUser = {
+          ...user,
+          role: user.role?.toUpperCase?.() || user.role
+        }
+        
+        console.log('📦 AuthStore - login:', {
+          user: { 
+            email: normalizedUser.email, 
+            role: normalizedUser.role 
+          },
+          hasToken: !!accessToken,
+          isAuthenticated: true
+        })
+        
+        set({
+          user: normalizedUser,
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+          isLoading: false,
+        })
+      },
 
-      logout: () => set({
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-        isAuthenticated: false,
-        isLoading: false,
-      }),
+      logout: () => {
+        console.log('🚪 AuthStore - logout')
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
+      },
 
-      updateProfile: (data) => set((state) => ({
-        user: state.user ? { ...state.user, ...data } : null,
-      })),
+      updateProfile: (data) => {
+        console.log('✏️ AuthStore - updateProfile:', data)
+        set((state) => ({
+          user: state.user ? { ...state.user, ...data } : null,
+        }))
+      },
     }),
     {
       name: 'auth-storage',
