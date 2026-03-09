@@ -49,20 +49,30 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
   const { auth } = useApi()
   const router = useRouter()
 
+  // Mark as hydrated after first client-side render
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
   // Check if user is already logged in on mount
   useEffect(() => {
+    // Only run on client after hydration
+    if (!isHydrated) return
+
     const checkAuth = async () => {
       try {
-        // ✅ FIXED: Check if window exists before accessing localStorage
         if (typeof window !== 'undefined') {
           const token = localStorage.getItem('token')
           const storedUser = localStorage.getItem('user')
 
           if (token && storedUser) {
-            setUser(JSON.parse(storedUser))
+            const parsedUser = JSON.parse(storedUser)
+            setUser(parsedUser)
+            console.log('✅ Auth restored from localStorage:', parsedUser.email)
           }
         }
       } catch (error) {
@@ -73,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     checkAuth()
-  }, [])
+  }, [isHydrated])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -86,7 +96,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setUser(user)
 
-        // ✅ FIXED: Check if window exists before localStorage access
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', token)
           localStorage.setItem('accessToken', token)
@@ -121,7 +130,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
-      // ✅ FIXED: Check if window exists before localStorage access
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token')
         localStorage.removeItem('accessToken')
@@ -131,6 +139,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(null)
       router.push('/')
     }
+  }
+
+  // During SSR and before hydration, show nothing or a simple loading state
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading application...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
