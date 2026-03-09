@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
 import { Header } from '@/components/shared/header'
 import { Sidebar } from '@/components/shared/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,14 +17,25 @@ import { formatDate } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function AdminPaymentsPage() {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchPayments()
-  }, [])
+    if (isAuthenticated && user?.role === 'admin') {
+      fetchPayments()
+    }
+  }, [isAuthenticated, user])
 
   const fetchPayments = async () => {
     try {
@@ -52,6 +66,16 @@ export default function AdminPaymentsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  // Redirect if not authenticated or not admin
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return null
   }
 
   const handleVerify = async (id: string) => {

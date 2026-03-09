@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
 import { Header } from '@/components/shared/header'
 import { Sidebar } from '@/components/shared/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +15,15 @@ import { tenantApi } from '@/lib/api/tenant'
 import { paymentApi } from '@/lib/api/payment'
 
 export default function AdminAnalyticsPage() {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
   const [loading, setLoading] = useState(true)
   const [analytics, setAnalytics] = useState({
     totalTenants: 0,
@@ -27,8 +39,10 @@ export default function AdminAnalyticsPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchAnalytics()
-  }, [])
+    if (isAuthenticated && user?.role === 'admin') {
+      fetchAnalytics()
+    }
+  }, [isAuthenticated, user])
 
   const fetchAnalytics = async () => {
     try {
@@ -83,6 +97,16 @@ export default function AdminAnalyticsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  // Redirect if not authenticated or not admin
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return null
   }
 
   const stats = [

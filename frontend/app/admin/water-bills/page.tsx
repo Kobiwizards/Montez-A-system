@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
 import { Header } from '@/components/shared/header'
 import { Sidebar } from '@/components/shared/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,6 +52,15 @@ interface Tenant {
 }
 
 export default function AdminWaterBillsPage() {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
   const [readings, setReadings] = useState<WaterReading[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,8 +68,10 @@ export default function AdminWaterBillsPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchData()
-  }, [selectedMonth])
+    if (isAuthenticated && user?.role === 'admin') {
+      fetchData()
+    }
+  }, [isAuthenticated, user, selectedMonth])
 
   const fetchData = async () => {
     try {
@@ -219,6 +233,16 @@ export default function AdminWaterBillsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  // Redirect if not authenticated or not admin
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return null
   }
 
   const stats = {
@@ -406,7 +430,7 @@ export default function AdminWaterBillsPage() {
                   <CardTitle>Water Readings & Bills - {selectedMonth}</CardTitle>
                   <CardDescription>
                     Monthly water consumption and billing records (Rate: KSh 150 per unit)
-              </CardDescription>
+                  </CardDescription>
                 </div>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />

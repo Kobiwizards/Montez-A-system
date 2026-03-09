@@ -14,7 +14,7 @@ export default function AdminLayout({
   const router = useRouter()
 
   useEffect(() => {
-    // Log EVERYTHING for debugging
+    // Log EVERYTHING for debugging - with safe localStorage access
     console.log('='.repeat(50))
     console.log('🔍 ADMIN LAYOUT DEBUG:')
     console.log('isLoading:', isLoading)
@@ -22,8 +22,15 @@ export default function AdminLayout({
     console.log('User object:', user)
     console.log('User role:', user?.role)
     console.log('User role type:', typeof user?.role)
-    console.log('LocalStorage token:', localStorage.getItem('token'))
-    console.log('LocalStorage user:', localStorage.getItem('user'))
+    
+    // ✅ FIXED: Only access localStorage on client side
+    if (typeof window !== 'undefined') {
+      console.log('LocalStorage token:', localStorage.getItem('token') ? 'Present' : 'Not found')
+      console.log('LocalStorage user:', localStorage.getItem('user') ? 'Present' : 'Not found')
+    } else {
+      console.log('LocalStorage: Not available (server-side)')
+    }
+    
     console.log('='.repeat(50))
 
     // Wait for loading to complete
@@ -62,7 +69,7 @@ export default function AdminLayout({
     )
   }
 
-  // ✅ FIXED: Check for lowercase 'admin'
+  // ✅ FIXED: Check for lowercase 'admin' and safe localStorage access in debug display
   if (!isAuthenticated || user?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -75,7 +82,7 @@ export default function AdminLayout({
             <p>User exists: {user ? 'Yes' : 'No'}</p>
             <p>User role: {user?.role || 'undefined'}</p>
             <p>Expected role: admin</p>
-            <p>Token exists: {localStorage.getItem('token') ? 'Yes' : 'No'}</p>
+            <p>Token exists: {typeof window !== 'undefined' && localStorage.getItem('token') ? 'Yes' : 'No'}</p>
           </div>
           <button
             onClick={() => router.push('/login')}

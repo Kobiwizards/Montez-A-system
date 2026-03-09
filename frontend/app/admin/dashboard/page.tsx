@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
 import { Search, Filter, Plus, MoreVertical, Eye, Edit, Trash2, UserPlus } from 'lucide-react'
 import { Header } from '@/components/shared/header'
 import { Sidebar } from '@/components/shared/sidebar'
@@ -11,10 +14,9 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/lib/hooks/use-toast'
-import { useAuth } from '@/components/shared/auth-provider'
 import Link from 'next/link'
-import { tenantApi } from '@/lib/api/tenant' // IMPORT API
-import { paymentApi } from '@/lib/api/payment' // IMPORT PAYMENT API
+import { tenantApi } from '@/lib/api/tenant'
+import { paymentApi } from '@/lib/api/payment'
 
 interface Tenant {
   id: string
@@ -30,23 +32,32 @@ interface Tenant {
 }
 
 export default function TenantsPage() {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const { user } = useAuth()
 
   useEffect(() => {
-    fetchTenants()
-  }, [])
+    if (isAuthenticated && user?.role === 'admin') {
+      fetchTenants()
+    }
+  }, [isAuthenticated, user])
 
   const fetchTenants = async () => {
     try {
       setLoading(true)
       console.log('🔄 Fetching tenants from API...')
       
-      // REAL API CALL - Fetches ALL tenants from database
       const response = await tenantApi.getAllTenants({ limit: 100 })
       
       console.log('📊 API Response:', {
@@ -77,6 +88,16 @@ export default function TenantsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  // Redirect if not authenticated or not admin
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return null
   }
 
   const filteredTenants = tenants.filter(tenant => {
@@ -112,13 +133,12 @@ export default function TenantsPage() {
     if (!confirm('Are you sure you want to delete this tenant?')) return
 
     try {
-      // REAL API CALL to delete tenant
       await tenantApi.deleteTenant(id)
       toast({
         title: 'Success',
         description: 'Tenant deleted successfully',
       })
-      fetchTenants() // Refresh the list
+      fetchTenants()
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -128,7 +148,6 @@ export default function TenantsPage() {
     }
   }
 
-  // Fetch additional stats from API
   const [stats, setStats] = useState({
     total: 0,
     current: 0,
@@ -152,13 +171,12 @@ export default function TenantsPage() {
         overdue,
         delinquent,
         totalOutstanding,
-        pendingPayments: 0, // You can fetch this from paymentApi.getPendingPayments()
+        pendingPayments: 0,
         verifiedPayments: 0
       })
     }
   }, [tenants])
 
-  // Quick refresh button
   const handleRefresh = () => {
     fetchTenants()
     toast({

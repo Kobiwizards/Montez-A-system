@@ -10,7 +10,7 @@ interface User {
   name: string
   phone?: string
   apartment: string
-  role: 'admin' | 'tenant'  // ✅ FIXED: Changed from 'ADMIN' | 'TENANT'
+  role: 'admin' | 'tenant'
   rentAmount: number
   balance: number
   waterRate?: number
@@ -56,11 +56,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('token')
-        const storedUser = localStorage.getItem('user')
+        // ✅ FIXED: Check if window exists before accessing localStorage
+        if (typeof window !== 'undefined') {
+          const token = localStorage.getItem('token')
+          const storedUser = localStorage.getItem('user')
 
-        if (token && storedUser) {
-          setUser(JSON.parse(storedUser))
+          if (token && storedUser) {
+            setUser(JSON.parse(storedUser))
+          }
         }
       } catch (error) {
         console.error('Auth check error:', error)
@@ -76,24 +79,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true)
 
-      // Call REAL backend API
       const response = await auth.login({ email, password })
 
-      // ✅ FIXED: Backend returns data at root level, not nested
       if (response.success && response.user && response.token) {
         const { user, token, refreshToken } = response
 
         setUser(user)
 
-        // Store in localStorage
-        localStorage.setItem('token', token)
-        localStorage.setItem('accessToken', token) // Store both for compatibility
-        if (refreshToken) {
-          localStorage.setItem('refreshToken', refreshToken)
+        // ✅ FIXED: Check if window exists before localStorage access
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('token', token)
+          localStorage.setItem('accessToken', token)
+          if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken)
+          }
+          localStorage.setItem('user', JSON.stringify(user))
         }
-        localStorage.setItem('user', JSON.stringify(user))
 
-        // ✅ FIXED: Check for lowercase 'admin'
         if (user.role === 'admin') {
           router.push('/admin/dashboard')
         } else {
@@ -119,11 +121,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
-      // Clear local storage
-      localStorage.removeItem('token')
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
+      // ✅ FIXED: Check if window exists before localStorage access
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+      }
       setUser(null)
       router.push('/')
     }
