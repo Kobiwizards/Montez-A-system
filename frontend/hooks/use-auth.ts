@@ -23,57 +23,58 @@ export function useAuth() {
   // Initialize auth state on mount
   useEffect(() => {
     const initAuth = async () => {
-      // Always set loading true at start
-      setLoading(true)
-      
-      try {
-        if (typeof window !== 'undefined') {
-          const storedToken = localStorage.getItem('token')
-          const storedUser = localStorage.getItem('user')
+      // ✅ RESTORE USER FROM LOCALSTORAGE
+      if (typeof window !== 'undefined') {
+        const storedToken = localStorage.getItem('token')
+        const storedUser = localStorage.getItem('user')
 
-          console.log('🔍 Auth Init - Storage check:', {
-            hasToken: !!storedToken,
-            hasUser: !!storedUser,
-            storedUser: storedUser ? JSON.parse(storedUser) : null
-          })
+        console.log('🔍 Auth Init - Storage check:', {
+          hasToken: !!storedToken,
+          hasUser: !!storedUser,
+          storedUser: storedUser ? JSON.parse(storedUser) : null
+        })
 
-          if (storedToken && storedUser) {
+        // 🔥 CRITICAL FIX: If we have both token and user in localStorage but store is empty, restore them
+        if (storedToken && storedUser && !user && !isAuthenticated) {
+          try {
             const parsedUser = JSON.parse(storedUser)
-            console.log('✅ Restoring user from localStorage:', parsedUser.email)
+            console.log('🔄 Restoring user from localStorage:', parsedUser.email)
             
-            // Update both store and localStorage
-            setUser(parsedUser)
-            setTokens(storedToken, localStorage.getItem('refreshToken') || '')
-            
-            // Optionally verify token with backend
-            try {
-              const response = await api.get<any>('/auth/profile')
-              const data = response as any
-              if (data.success && data.data) {
-                console.log('✅ Profile verified:', data.data.email)
-                setUser(data.data)
-              }
-            } catch (error) {
-              console.error('❌ Token verification failed, clearing storage')
-              localStorage.removeItem('token')
-              localStorage.removeItem('accessToken')
-              localStorage.removeItem('refreshToken')
-              localStorage.removeItem('user')
-              setUser(null)
-              setTokens('', '')
-            }
+            // Restore to store
+            storeLogin(parsedUser, storedToken, localStorage.getItem('refreshToken') || undefined)
+          } catch (error) {
+            console.error('❌ Failed to restore user from localStorage:', error)
           }
         }
-      } catch (error) {
-        console.error('❌ Auth initialization error:', error)
-      } finally {
+      }
+
+      // Only fetch profile if we have token but no user in store
+      if (accessToken && !user) {
+        try {
+          setLoading(true)
+          console.log('🔄 Fetching user profile with token:', accessToken.substring(0, 20) + '...')
+
+          const response = await api.get<any>('/auth/profile')
+          const data = response as any
+
+          if (data.success && data.data) {
+            console.log('✅ Profile loaded:', data.data.email)
+            setUser(data.data)
+          } else {
+            console.error('❌ Failed to load profile:', data.message)
+          }
+        } catch (error) {
+          console.error('❌ Failed to load user profile:', error)
+        } finally {
+          setLoading(false)
+        }
+      } else {
         setLoading(false)
-        console.log('🏁 Auth initialization complete')
       }
     }
 
     initAuth()
-  }, [setUser, setTokens, setLoading])
+  }, [accessToken, user, setUser, setLoading, storeLogin, isAuthenticated])
 
   // Redirect if not authenticated for protected routes
   useEffect(() => {
@@ -85,17 +86,10 @@ export function useAuth() {
       isProtectedRoute,
       isAuthenticated,
       isLoading,
-      userRole: user?.role,
-      hasUser: !!user
+      userRole: user?.role
     })
 
-    // Wait for loading to complete before redirecting
-    if (isLoading) {
-      console.log('⏳ Still loading, skipping redirect check')
-      return
-    }
-
-    if (isProtectedRoute && !isAuthenticated) {
+    if (isProtectedRoute && !isAuthenticated && !isLoading) {
       console.log('🔄 Redirecting to login - not authenticated')
       router.push('/login')
     }
@@ -130,10 +124,8 @@ export function useAuth() {
           role: normalizedUser.role
         })
 
-        // Store in auth store FIRST
         storeLogin(normalizedUser, token, refreshToken)
 
-        // Then store in localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', token)
           localStorage.setItem('accessToken', token)
@@ -147,10 +139,7 @@ export function useAuth() {
         const redirectPath = normalizedUser.role === 'admin' ? '/admin/dashboard' : '/tenant/dashboard'
         console.log('🔄 Redirecting to:', redirectPath)
 
-        // Small delay to ensure state updates
-        setTimeout(() => {
-          window.location.href = redirectPath
-        }, 100)
+        window.location.href = redirectPath
 
         return { success: true }
       } else {
@@ -171,7 +160,119 @@ export function useAuth() {
     }
   }
 
-  // ... rest of the methods remain the same
+  const register = async (data: RegisterData) => {
+    try {
+      setLoading(true)
+      const response = await api.post<any>('/auth/register', data)
+      const result = response as any
+
+      if (result.success) {
+        return { success: true }
+      } else {
+        return {
+          success: false,
+          error: result.message || 'Registration failed'
+        }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Registration failed'
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const logout = async () => {
+    try {
+      console.log('🚪 Logging out...')
+      await api.post('/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+      }
+      storeLogout()
+      console.log('✅ Logout complete, redirecting to home')
+      router.push('/')
+    }
+  }
+
+  const changePassword = async (data: ChangePasswordData) => {
+    try {
+      setLoading(true)
+      const response = await api.put<any>('/auth/change-password', data)
+      const result = response as any
+
+      if (result.success) {
+        return { success: true }
+      } else {
+        return {
+          success: false,
+          error: result.message || 'Password change failed'
+        }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Password change failed'
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateProfile = async (data: any) => {
+    try {
+      setLoading(true)
+      const response = await api.put<any>('/auth/profile', data)
+      const result = response as any
+
+      if (result.success && result.data) {
+        storeUpdateProfile(result.data)
+        return { success: true, data: result.data }
+      } else {
+        return {
+          success: false,
+          error: result.message || 'Profile update failed'
+        }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Profile update failed'
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const refreshToken = async () => {
+    try {
+      const response = await api.post<any>('/auth/refresh-token')
+      const data = response as any
+
+      if (data.success && data.data) {
+        const { token, refreshToken } = data.data
+        setTokens(token, refreshToken)
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('token', token)
+          localStorage.setItem('accessToken', token)
+          localStorage.setItem('refreshToken', refreshToken)
+        }
+        return true
+      }
+      return false
+    } catch (error) {
+      return false
+    }
+  }
 
   return {
     user,
