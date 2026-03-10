@@ -40,8 +40,11 @@ export function useAuth() {
             const parsedUser = JSON.parse(storedUser)
             console.log('🔄 Restoring user from localStorage:', parsedUser.email)
             
+            // ✅ FIXED: Provide empty string if refreshToken doesn't exist
+            const refreshToken = localStorage.getItem('refreshToken') || ''
+            
             // Restore to store
-            storeLogin(parsedUser, storedToken, localStorage.getItem('refreshToken') || undefined)
+            storeLogin(parsedUser, storedToken, refreshToken)
           } catch (error) {
             console.error('❌ Failed to restore user from localStorage:', error)
           }
